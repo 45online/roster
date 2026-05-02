@@ -94,7 +94,8 @@ func buildRootCmd(headless bool) *cobra.Command {
 			newUpdateCmd(),
 			newAgentsCmd(),
 			newInstallCmd(),
-			newSyncIssueCmd(), // Roster Module A: Issue → Jira
+			newSyncIssueCmd(), // Roster Module A (manual one-shot)
+			newTakeoverCmd(),  // Roster poller (foreground daemon)
 		)
 	}
 

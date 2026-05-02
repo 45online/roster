@@ -22,8 +22,9 @@ GitHub  ←→  Roster (AI 员工)  ←→  Jira / Confluence / Slack
 |---|---|
 | 0. Fork claude-code-go 改名 + 业务目录 | ✅ 已完成 |
 | 1. CLI 文案 + 启动 logo | ✅ 已完成 |
-| 2. Module A: Issue → Jira(手动一次性) | ✅ 已完成 |
-| 2.x. Poller + 自动触发 | ⏳ 下一步 |
+| 2. Module A: Issue → Jira(手动一次性 `sync-issue`) | ✅ 已完成 |
+| 2.x. Poller + 防循环 + `takeover` 自动触发 | ✅ 已完成 |
+| 2.y. Claude API 接入(智能字段抽取) | ⏳ 下一步 |
 | 3. Module B: PR AI Review | ⏳ |
 | 4. Module C: Issue close → Confluence | ⏳ |
 | 5. Module D: 告警聚合 → Slack | ⏳ |
@@ -75,18 +76,28 @@ make build
 
 ### 试用 Module A(已可用)
 
-最小验证:把一个 GitHub issue 同步到 Jira,看完整链路是否能跑通。
-
 ```bash
 export ROSTER_GITHUB_TOKEN=ghp_xxx                    # GitHub PAT(虚拟员工账户)
 export ROSTER_JIRA_URL=https://yourorg.atlassian.net  # Jira 站点
 export ROSTER_JIRA_EMAIL=you@example.com              # Jira 账户邮箱
 export ROSTER_JIRA_TOKEN=xxxx                         # Jira API token
+```
 
+**A. 一次性手动同步**
+```bash
 ./bin/roster sync-issue --repo owner/name --issue 42 --jira-project ABC
 # → ✓ Created ABC-123
-#   https://yourorg.atlassian.net/browse/ABC-123
-# 同时在 GitHub issue #42 留下评论:📋 Tracking in Jira: **ABC-123**
+#   同时 GH issue #42 出现评论:📋 Tracking in Jira: **ABC-123**
+```
+
+**B. 后台 daemon(自动监听 issues.opened)**
+```bash
+./bin/roster takeover --repo owner/name --jira-project ABC --interval 30s
+# → ✓ Authenticated as @virtual-employee (anti-loop filter armed)
+#   [poller] owner/name: starting (interval=30s, ...)
+#   [mod-a] dispatching: owner/name#43 "fix login bug" (by @real-user)
+#   [mod-a] ✓ ABC-124
+# Ctrl+C 停止;cursor 持久化到 ~/.roster/cursors/owner_name.json
 ```
 
 ### 计划中的使用流程(daemon 模式,尚未实现)
