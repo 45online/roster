@@ -101,7 +101,7 @@ func TestBuildDescription_IncludesIssueMetadata(t *testing.T) {
 		Body:    "We have a problem.",
 		Labels:  []gh.Label{{Name: "bug"}, {Name: "P0"}},
 	}
-	desc := buildDescription(issue, "foo/bar")
+	desc := buildDescription(issue, "foo/bar", "")
 
 	for _, s := range []string{
 		"https://github.com/foo/bar/issues/42",
@@ -121,7 +121,7 @@ func TestBuildDescription_HandlesEmptyBody(t *testing.T) {
 		User:    gh.User{Login: "bob"},
 		Body:    "",
 	}
-	desc := buildDescription(issue, "foo/bar")
+	desc := buildDescription(issue, "foo/bar", "")
 	if !strings.Contains(desc, "(no description)") {
 		t.Errorf("expected '(no description)' marker for empty body, got: %s", desc)
 	}

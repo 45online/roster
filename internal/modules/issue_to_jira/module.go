@@ -30,9 +30,10 @@ type Config struct {
 
 // Module is the Issue → Jira sync module.
 type Module struct {
-	gh   *gh.Client
-	jira *jira.Client
-	cfg  Config
+	gh        *gh.Client
+	jira      *jira.Client
+	cfg       Config
+	extractor *Extractor // optional Claude-powered field extractor
 }
 
 // New constructs a Module. The caller supplies pre-configured adapters.
@@ -40,10 +41,21 @@ func New(github *gh.Client, j *jira.Client, cfg Config) *Module {
 	return &Module{gh: github, jira: j, cfg: cfg}
 }
 
+// WithExtractor enables Claude-powered field extraction. When set, the
+// module asks Claude to derive summary / issue_type / priority / component
+// from the issue text; mechanical label-based mapping remains the fallback
+// path on extraction failure.
+func (m *Module) WithExtractor(e *Extractor) *Module {
+	m.extractor = e
+	return m
+}
+
 // Result is what SyncIssue returns on success.
 type Result struct {
 	JiraKey string
 	JiraURL string
+	// AIExtracted is true when Claude's extractor produced the fields used.
+	AIExtracted bool
 }
 
 // SyncIssue fetches the given GitHub issue, creates a corresponding Jira
@@ -57,12 +69,14 @@ func (m *Module) SyncIssue(ctx context.Context, repo string, number int) (*Resul
 		return nil, fmt.Errorf("fetch github issue: %w", err)
 	}
 
+	summary, issueType, priority, component, aiUsed := m.deriveFields(ctx, issue)
+
 	createReq := jira.CreateIssueRequest{
 		Project:     m.cfg.JiraProject,
-		Summary:     truncate(issue.Title, 240),
-		Description: buildDescription(issue, repo),
-		IssueType:   m.resolveIssueType(issue),
-		Priority:    m.resolvePriority(issue),
+		Summary:     summary,
+		Description: buildDescription(issue, repo, component),
+		IssueType:   issueType,
+		Priority:    priority,
 	}
 
 	created, err := m.jira.CreateIssue(ctx, createReq)
@@ -73,11 +87,38 @@ func (m *Module) SyncIssue(ctx context.Context, repo string, number int) (*Resul
 	comment := fmt.Sprintf("📋 Tracking in Jira: **[%s](%s)**", created.Key, created.URL)
 	if err := m.gh.CreateComment(ctx, repo, number, comment); err != nil {
 		// The Jira ticket exists; we report partial success.
-		return &Result{JiraKey: created.Key, JiraURL: created.URL},
+		return &Result{JiraKey: created.Key, JiraURL: created.URL, AIExtracted: aiUsed},
 			fmt.Errorf("post github back-link comment: %w", err)
 	}
 
-	return &Result{JiraKey: created.Key, JiraURL: created.URL}, nil
+	return &Result{JiraKey: created.Key, JiraURL: created.URL, AIExtracted: aiUsed}, nil
+}
+
+// deriveFields chooses the values for summary / issue type / priority /
+// component, preferring the AI extractor when available and falling back
+// to mechanical mapping for any field the extractor omits or fails on.
+func (m *Module) deriveFields(ctx context.Context, issue *gh.Issue) (
+	summary, issueType, priority, component string, aiUsed bool,
+) {
+	if m.extractor != nil {
+		if f, err := m.extractor.Extract(ctx, issue); err == nil && f != nil {
+			summary = strings.TrimSpace(f.Summary)
+			issueType = f.IssueType
+			priority = f.Priority
+			component = f.Component
+			aiUsed = true
+		}
+	}
+	if summary == "" {
+		summary = truncate(issue.Title, 240)
+	}
+	if issueType == "" {
+		issueType = m.resolveIssueType(issue)
+	}
+	if priority == "" {
+		priority = m.resolvePriority(issue)
+	}
+	return
 }
 
 // resolveIssueType picks a Jira issue type by:
@@ -115,8 +156,9 @@ func truncate(s string, n int) string {
 }
 
 // buildDescription renders a Jira description body that links back to the
-// GitHub issue and inlines its body.
-func buildDescription(issue *gh.Issue, repo string) string {
+// GitHub issue and inlines its body. The optional component is rendered as
+// a header line when present.
+func buildDescription(issue *gh.Issue, repo, component string) string {
 	body := strings.TrimSpace(issue.Body)
 	if body == "" {
 		body = "(no description)"
@@ -129,9 +171,13 @@ func buildDescription(issue *gh.Issue, repo string) string {
 	if len(labels) > 0 {
 		labelLine = "Labels: " + strings.Join(labels, ", ") + "\n"
 	}
+	componentLine := ""
+	if component != "" {
+		componentLine = "Component: " + component + "\n"
+	}
 
 	return fmt.Sprintf(
-		"GitHub: %s\nReporter: @%s\n%s\n---\n\n%s",
-		issue.HTMLURL, issue.User.Login, labelLine, body,
+		"GitHub: %s\nReporter: @%s\n%s%s\n---\n\n%s",
+		issue.HTMLURL, issue.User.Login, labelLine, componentLine, body,
 	)
 }

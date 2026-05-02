@@ -9,6 +9,7 @@ import (
 
 	gh "github.com/45online/roster/internal/adapters/github"
 	"github.com/45online/roster/internal/adapters/jira"
+	"github.com/45online/roster/internal/api"
 	"github.com/45online/roster/internal/modules/issue_to_jira"
 )
 
@@ -71,6 +72,20 @@ Credentials are read from environment variables:
 				},
 			})
 
+			// Optional Claude extractor: enabled iff ANTHROPIC_API_KEY is set.
+			if claudeKey := os.Getenv("ANTHROPIC_API_KEY"); claudeKey != "" {
+				apiClient, apiErr := api.NewClient(api.ClientConfig{
+					Provider: api.ProviderDirect,
+					APIKey:   claudeKey,
+				}, nil)
+				if apiErr == nil {
+					mod = mod.WithExtractor(issue_to_jira.NewExtractor(apiClient, ""))
+					fmt.Println("✓ Claude extractor enabled")
+				} else {
+					fmt.Fprintf(os.Stderr, "⚠ Claude client init failed (%v); falling back to mechanical mapping\n", apiErr)
+				}
+			}
+
 			ctx := context.Background()
 			res, err := mod.SyncIssue(ctx, repo, issueNum)
 			if err != nil && res == nil {
@@ -80,7 +95,11 @@ Credentials are read from environment variables:
 				// partial success: Jira ticket created, but back-link comment failed.
 				fmt.Fprintf(os.Stderr, "⚠ partial: %v\n", err)
 			}
-			fmt.Printf("✓ Created %s\n  %s\n", res.JiraKey, res.JiraURL)
+			marker := ""
+			if res.AIExtracted {
+				marker = " (AI-extracted)"
+			}
+			fmt.Printf("✓ Created %s%s\n  %s\n", res.JiraKey, marker, res.JiraURL)
 			return nil
 		},
 	}

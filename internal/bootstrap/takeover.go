@@ -14,6 +14,7 @@ import (
 
 	gh "github.com/45online/roster/internal/adapters/github"
 	"github.com/45online/roster/internal/adapters/jira"
+	"github.com/45online/roster/internal/api"
 	"github.com/45online/roster/internal/modules/issue_to_jira"
 	"github.com/45online/roster/internal/poller"
 )
@@ -82,6 +83,18 @@ Credentials (env vars):
 				},
 			})
 
+			// Optional Claude extractor: enabled iff ANTHROPIC_API_KEY is set.
+			if claudeKey := os.Getenv("ANTHROPIC_API_KEY"); claudeKey != "" {
+				apiClient, apiErr := api.NewClient(api.ClientConfig{
+					Provider: api.ProviderDirect,
+					APIKey:   claudeKey,
+				}, nil)
+				if apiErr == nil {
+					modA = modA.WithExtractor(issue_to_jira.NewExtractor(apiClient, ""))
+					fmt.Println("✓ Claude extractor enabled")
+				}
+			}
+
 			ctx, cancel := signalContext()
 			defer cancel()
 
@@ -113,7 +126,11 @@ Credentials (env vars):
 					log.Printf("[mod-a] partial: %s created, comment failed: %v", res.JiraKey, err)
 					return nil
 				}
-				log.Printf("[mod-a] ✓ %s → %s", res.JiraURL, res.JiraURL)
+				marker := ""
+				if res.AIExtracted {
+					marker = " (AI-extracted)"
+				}
+				log.Printf("[mod-a] ✓ %s%s → %s", res.JiraKey, marker, res.JiraURL)
 				return nil
 			}
 

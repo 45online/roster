@@ -24,7 +24,8 @@ GitHub  ←→  Roster (AI 员工)  ←→  Jira / Confluence / Slack
 | 1. CLI 文案 + 启动 logo | ✅ 已完成 |
 | 2. Module A: Issue → Jira(手动一次性 `sync-issue`) | ✅ 已完成 |
 | 2.x. Poller + 防循环 + `takeover` 自动触发 | ✅ 已完成 |
-| 2.y. Claude API 接入(智能字段抽取) | ⏳ 下一步 |
+| 2.y. Claude API 接入(智能字段抽取) | ✅ 已完成 |
+| 2.z. SQLite 审计日志 + `.roster/config.yml` + `roster login` | ⏳ 下一步 |
 | 3. Module B: PR AI Review | ⏳ |
 | 4. Module C: Issue close → Confluence | ⏳ |
 | 5. Module D: 告警聚合 → Slack | ⏳ |
@@ -99,6 +100,18 @@ export ROSTER_JIRA_TOKEN=xxxx                         # Jira API token
 #   [mod-a] ✓ ABC-124
 # Ctrl+C 停止;cursor 持久化到 ~/.roster/cursors/owner_name.json
 ```
+
+**C. 启用 Claude 智能字段抽取(可选)**
+
+设置 `ANTHROPIC_API_KEY` 后,Module A 会让 Claude 读 issue body,生成更精炼的 summary、推断 issue type / priority / component:
+```bash
+export ANTHROPIC_API_KEY=sk-ant-xxx
+./bin/roster sync-issue --repo owner/name --issue 42 --jira-project ABC
+# → ✓ Claude extractor enabled
+#   ✓ Created ABC-125 (AI-extracted)
+```
+
+未设置时自动 fallback 到 label 机械映射;Claude 调用失败时也会安静地降级。
 
 ### 计划中的使用流程(daemon 模式,尚未实现)
 ```bash
