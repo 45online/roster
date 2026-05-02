@@ -169,7 +169,7 @@ func NewAppStateStore(initial AppState) *AppStateStore {
 }
 
 // GetDefaultAppState returns a zero-value AppState with all maps and slices
-// initialised (mirrors the TypeScript getDefaultAppState()).
+// initialised (mirrors the upstream getDefaultAppState()).
 func GetDefaultAppState() AppState {
 	return AppState{
 		Tasks:             make(map[string]TaskState),

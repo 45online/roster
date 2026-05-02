@@ -7,13 +7,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// newDoctorCmd creates the `claude doctor` subcommand.
+// newDoctorCmd creates the `roster doctor` subcommand.
 func newDoctorCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "doctor",
-		Short: "Run diagnostic checks on your Claude Code installation",
+		Short: "Run diagnostic checks on your Roster installation",
 		Long: longDesc(`
-Runs a series of diagnostic checks to verify your Claude Code environment:
+Runs a series of diagnostic checks to verify your Roster environment:
 
   • Go runtime version
   • Authentication status
@@ -29,21 +29,21 @@ Runs a series of diagnostic checks to verify your Claude Code environment:
 }
 
 func runDoctor() error {
-	fmt.Printf("Claude Code diagnostic report\n")
+	fmt.Printf("Roster diagnostic report\n")
 	fmt.Printf("  Go runtime : %s %s/%s\n", runtime.Version(), runtime.GOOS, runtime.GOARCH)
 	fmt.Printf("  Version    : %s\n", appVersion)
 	fmt.Println()
 	fmt.Println("For full diagnostics, authentication checks, and network tests, run:")
-	fmt.Println("  claude doctor --verbose")
+	fmt.Println("  roster doctor --verbose")
 	return nil
 }
 
-// newUpdateCmd creates the `claude update` subcommand.
+// newUpdateCmd creates the `roster update` subcommand.
 func newUpdateCmd() *cobra.Command {
 	var check bool
 	cmd := &cobra.Command{
 		Use:          "update",
-		Short:        "Update Claude Code to the latest release",
+		Short:        "Update Roster to the latest release",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if check {
@@ -58,7 +58,7 @@ func newUpdateCmd() *cobra.Command {
 	return cmd
 }
 
-// newAgentsCmd creates the `claude agents` subcommand tree.
+// newAgentsCmd creates the `roster agents` subcommand tree.
 func newAgentsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:          "agents",
@@ -94,7 +94,7 @@ func newAgentsCmd() *cobra.Command {
 	return cmd
 }
 
-// newInstallCmd creates the `claude install` subcommand.
+// newInstallCmd creates the `roster install` subcommand.
 func newInstallCmd() *cobra.Command {
 	var (
 		target string
@@ -103,7 +103,7 @@ func newInstallCmd() *cobra.Command {
 		Use:   "install",
 		Short: "Install shell integration (completions, PATH setup)",
 		Long: longDesc(`
-Installs Claude Code shell integration for the current user:
+Installs Roster shell integration for the current user:
 
   • Adds shell completion scripts (bash / zsh / fish)
   • Optionally adds the binary to PATH via your shell RC file

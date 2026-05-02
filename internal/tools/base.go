@@ -53,7 +53,7 @@ func (b BaseTool) PreparePermissionMatcher(_ Input) (func(string) bool, error) {
 	return nil, nil
 }
 
-// MapResultToToolResultBlock converts the output to a standard Anthropic
+// MapResultToToolResultBlock converts the output to a standard Claude
 // tool_result content block. Concrete tools can override for custom formats.
 func (b BaseTool) MapResultToToolResultBlock(output any, toolUseID string) (json.RawMessage, error) {
 	var contentStr string

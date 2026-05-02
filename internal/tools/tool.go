@@ -245,7 +245,7 @@ type Tool interface {
 
 	// ── Serialization ────────────────────────────────────────────────────────
 
-	// MapResultToToolResultBlock converts tool output into an Anthropic API
+	// MapResultToToolResultBlock converts tool output into an Claude API
 	// tool_result content block (json.RawMessage).
 	MapResultToToolResultBlock(output any, toolUseID string) (json.RawMessage, error)
 

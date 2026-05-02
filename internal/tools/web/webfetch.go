@@ -172,7 +172,7 @@ func (t *webFetchTool) Call(input tools.Input, ctx *tools.UseContext, _ tools.On
 	if err != nil {
 		return &tools.Result{IsError: true, Content: fmt.Sprintf("cannot build request: %v", err)}, nil
 	}
-	req.Header.Set("User-Agent", "claude-code-go/1.0 (WebFetch tool)")
+	req.Header.Set("User-Agent", "roster/1.0 (WebFetch tool)")
 	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.5")
 
 	if ctx != nil && ctx.Ctx != nil {

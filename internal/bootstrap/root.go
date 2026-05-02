@@ -65,13 +65,19 @@ func newRootCmd() *cobra.Command {
 	f := &rootFlags{}
 
 	cmd := &cobra.Command{
-		Use:   "claude",
-		Short: "Claude Code — AI coding assistant",
+		Use:   "roster",
+		Short: "Roster — AI employee for GitHub-driven dev management",
 		Long: longDesc(`
-Claude Code is an AI-powered coding assistant that runs in your terminal.
+Roster is a CLI tool that lets an AI take over a "virtual employee" GitHub
+account and run your project management workflows: Issue → Jira sync,
+PR review, Issue close → Confluence archive, alert aggregation to Slack.
 
-Without any sub-command, claude opens an interactive REPL session in the
-current directory.  Use -p / --print for non-interactive single-shot mode.
+Project workflow:
+  roster init                  # generate .roster/config.yml in this repo
+  roster takeover              # validate + start the daemon
+
+Without any sub-command, roster opens an interactive session for ad-hoc
+local work in the current directory.  Use -p / --print for single-shot mode.
 `),
 		// SilenceUsage suppresses the usage message on error (cleaner UX).
 		SilenceUsage: true,

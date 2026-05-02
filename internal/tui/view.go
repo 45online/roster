@@ -73,7 +73,7 @@ func (m AppModel) View() string {
 	case dialogExit:
 		sb.WriteString("\n")
 		sb.WriteString(renderConfirmDialog(
-			"Exit Claude Code?",
+			"Exit Roster?",
 			"Press y to confirm, n to cancel.",
 			m.termWidth, m.theme,
 		))

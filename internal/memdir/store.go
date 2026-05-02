@@ -133,7 +133,7 @@ func (ms *MemoryStore) DeleteMemory(name string) error {
 // BuildIndex regenerates the MEMORY.md index file from all memory files.
 // The index uses Markdown link format `[Title](filename.md) — summary` so that
 // the LLM can directly identify file names for subsequent read/edit operations,
-// consistent with the original Claude Code (TypeScript) implementation.
+// consistent with the original upstream implementation.
 func (ms *MemoryStore) BuildIndex() error {
 	memories, err := ms.ListMemories()
 	if err != nil {

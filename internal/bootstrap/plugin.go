@@ -6,11 +6,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// newPluginCmd creates the `claude plugin` subcommand tree.
+// newPluginCmd creates the `roster plugin` subcommand tree.
 func newPluginCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:          "plugin",
-		Short:        "Manage Claude Code plugins",
+		Short:        "Manage Roster plugins",
 		SilenceUsage: true,
 	}
 

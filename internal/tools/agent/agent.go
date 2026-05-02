@@ -55,7 +55,7 @@ Available agent types (set via agent_type parameter):
 - "explore" — read-only codebase exploration (Read, Glob, Grep, Bash, WebSearch)
 - "plan" — produces a structured implementation plan without making changes
 - "verify" — runs tests and linting to validate changes
-- "guide" — helps with Claude Code usage and documentation
+- "guide" — helps with Roster usage and documentation
 
 Usage notes:
 - Use this tool for tasks that require multiple steps or tool calls

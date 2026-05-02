@@ -127,7 +127,7 @@ type engineImpl struct {
 
 // Config is the constructor parameter bundle for New.
 type Config struct {
-	// Client is the Anthropic API client (required).
+	// Client is the Claude API client (required).
 	Client api.Client
 	// Registry is the tool registry (required).
 	Registry *tools.Registry

@@ -10,10 +10,10 @@ import (
 	"github.com/45online/roster/internal/tools"
 )
 
-// toolNameRe matches characters NOT allowed in Anthropic tool names.
+// toolNameRe matches characters NOT allowed in Claude tool names.
 var toolNameRe = regexp.MustCompile(`[^a-zA-Z0-9_\-]`)
 
-// NormalizeToolName maps an MCP tool name to an Anthropic API-safe name.
+// NormalizeToolName maps an MCP tool name to an Claude API-safe name.
 // Only [a-zA-Z0-9_-] characters are kept; all others are replaced with "_".
 func NormalizeToolName(name string) string {
 	return toolNameRe.ReplaceAllString(name, "_")

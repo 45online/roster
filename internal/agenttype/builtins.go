@@ -67,8 +67,8 @@ var builtinProfiles = []*AgentProfile{
 	{
 		Type:        AgentTypeGuide,
 		DisplayName: "Guide",
-		Description: "Expert on Claude Code CLI, Agent SDK, and Claude API.",
-		WhenToUse: "Use when the user asks questions about Claude Code features, " +
+		Description: "Expert on Roster CLI, Agent SDK, and Claude API.",
+		WhenToUse: "Use when the user asks questions about Roster features, " +
 			"tools, configuration, or best practices.",
 		SystemPrompt: guideSystemPrompt,
 		ToolFilter: ToolFilter{

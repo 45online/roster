@@ -18,11 +18,11 @@ func newAuthCmd() *cobra.Command {
 		Use:   "auth",
 		Short: "Manage authentication credentials",
 		Long: longDesc(`
-Manage your Anthropic API authentication.
+Manage your Claude API authentication.
 
-Use 'claude auth login' to authenticate via OAuth or API key,
-'claude auth logout' to remove stored credentials, and
-'claude auth status' to check the current authentication state.
+Use 'roster auth login' to authenticate via OAuth or API key,
+'roster auth logout' to remove stored credentials, and
+'roster auth status' to check the current authentication state.
 `),
 		SilenceUsage: true,
 	}
@@ -44,14 +44,14 @@ func newAuthLoginCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "login",
-		Short: "Authenticate with Anthropic (OAuth PKCE or API key)",
+		Short: "Authenticate with Claude (OAuth PKCE or API key)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runAuthLogin(apiKey, loginClaude)
 		},
 	}
 
 	cmd.Flags().StringVar(&apiKey, "api-key", "", "Directly set an API key (skips OAuth browser flow)")
-	cmd.Flags().BoolVar(&loginClaude, "claude", false, "Use claude.ai OAuth endpoint instead of console.anthropic.com")
+	cmd.Flags().BoolVar(&loginClaude, "claude", false, "Use consumer OAuth endpoint instead of the developer console")
 	return cmd
 }
 
@@ -159,7 +159,7 @@ func runAuthStatus() error {
 			fmt.Println("Authenticated via ANTHROPIC_API_KEY environment variable.")
 			return nil
 		}
-		fmt.Fprintln(os.Stderr, "Not authenticated. Run 'claude auth login'.")
+		fmt.Fprintln(os.Stderr, "Not authenticated. Run 'roster auth login'.")
 		return fmt.Errorf("not authenticated")
 	}
 	fmt.Println("Authenticated.")

@@ -28,13 +28,13 @@ func TestMain_HelpFlag(t *testing.T) {
 
 	// bootstrap.Run uses the supplied args slice directly; it does NOT call
 	// os.Exit, so this is safe to call from a test.
-	_ = bootstrap.Run([]string{"claude", "--help"})
+	_ = bootstrap.Run([]string{"roster", "--help"})
 }
 
 // TestMain_VersionFlag verifies that HandleFastPath returns true when
 // --version is supplied, indicating the process should exit cleanly.
 func TestMain_VersionFlag(t *testing.T) {
-	os.Args = []string{"claude", "--version"}
+	os.Args = []string{"roster", "--version"}
 
 	handled := bootstrap.HandleFastPath(os.Args)
 	if !handled {
@@ -44,7 +44,7 @@ func TestMain_VersionFlag(t *testing.T) {
 
 // TestMain_NoFastPath verifies that HandleFastPath returns false for regular flags.
 func TestMain_NoFastPath(t *testing.T) {
-	handled := bootstrap.HandleFastPath([]string{"claude", "--print", "hello"})
+	handled := bootstrap.HandleFastPath([]string{"roster", "--print", "hello"})
 	if handled {
 		t.Error("HandleFastPath returned true for non-version flag, expected false")
 	}
@@ -52,7 +52,7 @@ func TestMain_NoFastPath(t *testing.T) {
 
 // TestMain_ShortVersionFlag verifies that -v is treated as the version flag.
 func TestMain_ShortVersionFlag(t *testing.T) {
-	handled := bootstrap.HandleFastPath([]string{"claude", "-v"})
+	handled := bootstrap.HandleFastPath([]string{"roster", "-v"})
 	if !handled {
 		t.Error("HandleFastPath returned false for -v, expected true")
 	}
@@ -68,7 +68,7 @@ func TestMain_RunUnknownSubcommand(t *testing.T) {
 	}()
 
 	// An unknown subcommand should return an error without panicking.
-	err := bootstrap.Run([]string{"claude", "unknown-subcommand-xyz"})
+	err := bootstrap.Run([]string{"roster", "unknown-subcommand-xyz"})
 	if err == nil {
 		t.Error("expected error for unknown subcommand, got nil")
 	}
@@ -81,7 +81,7 @@ func TestMainFunc_Help(t *testing.T) {
 	origArgs := os.Args
 	t.Cleanup(func() { os.Args = origArgs })
 
-	os.Args = []string{"claude", "--help"}
+	os.Args = []string{"roster", "--help"}
 
 	defer func() {
 		if r := recover(); r != nil {

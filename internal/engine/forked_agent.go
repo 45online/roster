@@ -10,7 +10,7 @@ import (
 
 // CacheSafeParams stores Prompt Cache parameters that can be shared with forked agents.
 // By reusing the same system prompt and context messages, forked agents benefit from
-// Anthropic's Prompt Cache, significantly reducing latency and cost.
+// Claude's Prompt Cache, significantly reducing latency and cost.
 type CacheSafeParams struct {
 	// SystemPrompt is the rendered system prompt shared with the parent.
 	SystemPrompt SystemPrompt

@@ -9,7 +9,7 @@ import (
 )
 
 // openaiSSEReader implements StreamReader for OpenAI streaming responses.
-// It translates OpenAI SSE events to the Anthropic StreamEvent format.
+// It translates OpenAI SSE events to the Claude StreamEvent format.
 type openaiSSEReader struct {
 	resp             *http.Response
 	scanner          *bufio.Scanner
@@ -45,7 +45,7 @@ func newOpenAISSEReader(resp *http.Response, dl *DebugLogger) *openaiSSEReader {
 	}
 }
 
-// Next returns the next SSE event from the OpenAI stream, converted to Anthropic format.
+// Next returns the next SSE event from the OpenAI stream, converted to Claude format.
 // Returns (nil, io.EOF) when the stream ends normally.
 func (r *openaiSSEReader) Next() (*StreamEvent, error) {
 	// Return any pending events first (even if done)
@@ -363,7 +363,7 @@ func (r *openaiSSEReader) createMessageDeltaEvent(choice *openaiStreamChoice) *S
 	}
 }
 
-// convertFinishReason converts OpenAI finish_reason to Anthropic stop_reason.
+// convertFinishReason converts OpenAI finish_reason to Claude stop_reason.
 func (r *openaiSSEReader) convertFinishReason(reason string) string {
 	switch reason {
 	case "stop":

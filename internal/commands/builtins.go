@@ -66,7 +66,7 @@ func cmdHelp(r *Registry) *Command {
 func cmdExit() *Command {
 	return &Command{
 		Name:        "exit",
-		Description: "Exit Claude Code",
+		Description: "Exit Roster",
 		Execute: func(ctx CommandContext, args string) Result {
 			return Result{
 				Text:       "Goodbye!",

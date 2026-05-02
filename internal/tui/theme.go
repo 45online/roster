@@ -1,4 +1,4 @@
-// Package tui implements the BubbleTea TUI layer for claude-code-go.
+// Package tui implements the BubbleTea TUI layer for roster.
 package tui
 
 import "github.com/charmbracelet/lipgloss"

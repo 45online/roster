@@ -1,11 +1,11 @@
-// Package types defines the shared types for claude-code-go.
+// Package types defines the shared types for roster.
 // All types in this package are stable once reviewed; changes require
 // cross-package coordination. Do NOT add non-stdlib imports.
 package types
 
 import "time"
 
-// Role corresponds to the Anthropic API message role.
+// Role corresponds to the Claude API message role.
 type Role string
 
 const (

@@ -1,4 +1,4 @@
-// Package main is the entry point for the Claude Code CLI.
+// Package main is the entry point for the Roster CLI.
 // It delegates immediately to internal/bootstrap after handling any
 // zero-dependency fast-path flags (--version, etc.).
 package main

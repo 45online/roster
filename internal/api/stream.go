@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// StreamEventType corresponds to the Anthropic SSE event type field.
+// StreamEventType corresponds to the Claude SSE event type field.
 type StreamEventType string
 
 const (
@@ -78,7 +78,7 @@ func newSSEReader(resp *http.Response) *sseReader {
 
 // Next returns the next SSE event from the stream.
 // Returns (nil, io.EOF) when the stream ends normally (event: message_stop).
-// Does NOT check for "[DONE]" sentinel (that is OpenAI convention, not Anthropic).
+// Does NOT check for "[DONE]" sentinel (that is OpenAI convention, not Claude).
 func (r *sseReader) Next() (*StreamEvent, error) {
 	if r.done {
 		return nil, io.EOF
@@ -124,7 +124,7 @@ func (r *sseReader) Next() (*StreamEvent, error) {
 func parseSSEEvent(eventType, data string) (*StreamEvent, error) {
 	ev := &StreamEvent{}
 
-	// If the event type is embedded in the data JSON (Anthropic sends `"type"` in data)
+	// If the event type is embedded in the data JSON (Claude sends `"type"` in data)
 	if data != "" {
 		if err := json.Unmarshal([]byte(data), ev); err != nil {
 			// Fallback: set type from event: header

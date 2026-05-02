@@ -38,7 +38,7 @@ type ClientConfig struct {
 	DebugFile string // Write debug log to this file path (empty = stderr)
 }
 
-// defaultBaseURL is the Anthropic API base URL.
+// defaultBaseURL is the Claude API base URL.
 const defaultBaseURL = "https://api.anthropic.com"
 
 // defaultOpenAIBaseURL is the OpenAI API base URL.
@@ -47,10 +47,10 @@ const defaultOpenAIBaseURL = "https://api.openai.com"
 // appVersion is the application version string embedded in User-Agent.
 const appVersion = "0.1.0"
 
-// buildDefaultHeaders returns the default HTTP headers for Anthropic API requests.
+// buildDefaultHeaders returns the default HTTP headers for Claude API requests.
 func buildDefaultHeaders(version string) map[string]string {
 	return map[string]string{
-		"User-Agent": "claude-code-go/" + version,
+		"User-Agent": "roster/" + version,
 	}
 }
 

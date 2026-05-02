@@ -188,7 +188,7 @@ func (m InputModel) View(theme Theme) string {
 			indicator = accentStyle(theme).Render("[VISUAL] ")
 		}
 	}
-	// Add > prompt prefix to match original Claude Code style
+	// Add > prompt prefix to match original Roster style
 	prompt := accentStyle(theme).Bold(true).Render("> ")
 	return prompt + indicator + m.textarea.View()
 }

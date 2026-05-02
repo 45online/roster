@@ -1,4 +1,4 @@
-// Package compact implements context compaction strategies for the claude-code-go engine.
+// Package compact implements context compaction strategies for the roster engine.
 // Three strategies are provided:
 //   - AutoCompactor: token-threshold-based automatic compaction (LLM summarisation)
 //   - MicroCompactor: per-tool-result compaction
@@ -62,7 +62,7 @@ type CompactionResult struct {
 	CompactionUsage *TokenUsage
 }
 
-// TokenUsage records Anthropic API token consumption.
+// TokenUsage records Claude API token consumption.
 type TokenUsage struct {
 	InputTokens              int
 	OutputTokens             int

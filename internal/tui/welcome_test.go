@@ -27,8 +27,8 @@ func TestWelcomeHeader_View(t *testing.T) {
 	}
 
 	// Should contain version
-	if !strings.Contains(view, "Claude Code") {
-		t.Error("expected 'Claude Code' in view")
+	if !strings.Contains(view, "Roster") {
+		t.Error("expected 'Roster' in view")
 	}
 
 	// After shown, View should return empty

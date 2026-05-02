@@ -1,4 +1,4 @@
-// Package coordinator implements multi-agent coordination for Claude Code Go.
+// Package coordinator implements multi-agent coordination for Roster.
 //
 // It manages the lifecycle of sub-agents (spawn, message routing, stop, status
 // query) and exposes the Coordinator interface used by the AgentTool,

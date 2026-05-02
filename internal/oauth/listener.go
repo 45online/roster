@@ -122,7 +122,7 @@ func (l *AuthCodeListener) handleCallback(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, `<!DOCTYPE html><html><body>
 <h2>Authentication successful!</h2>
-<p>You can close this window and return to Claude Code.</p>
+<p>You can close this window and return to Roster.</p>
 <script>window.close();</script>
 </body></html>`)
 

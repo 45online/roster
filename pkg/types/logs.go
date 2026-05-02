@@ -1,4 +1,4 @@
-// Package types defines the shared types for claude-code-go.
+// Package types defines the shared types for roster.
 // All types in this package are stable once reviewed; changes require
 // cross-package coordination. Do NOT add non-stdlib imports.
 package types
@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// EntryType enumerates the JSONL log entry types (mirrors TypeScript src/types/logs.ts).
+// EntryType enumerates the JSONL log entry types (mirrors the upstream log entry types).
 type EntryType string
 
 const (

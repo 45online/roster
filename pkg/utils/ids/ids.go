@@ -1,4 +1,4 @@
-// Package ids provides ID generation utilities for claude-code-go.
+// Package ids provides ID generation utilities for roster.
 // All ID generation logic lives here; pkg/types only defines the branded types.
 package ids
 
@@ -17,7 +17,7 @@ func NewSessionId() types.SessionId {
 	b := make([]byte, 8)
 	if _, err := rand.Read(b); err != nil {
 		// crypto/rand is unavailable — this is a non-recoverable condition.
-		panic(fmt.Sprintf("claude-code-go: crypto/rand unavailable: %v", err))
+		panic(fmt.Sprintf("roster: crypto/rand unavailable: %v", err))
 	}
 	return types.SessionId(fmt.Sprintf("%d-%s", time.Now().UnixMilli(), hex.EncodeToString(b)))
 }
@@ -28,7 +28,7 @@ func NewSessionId() types.SessionId {
 func NewAgentId(prefix string) types.AgentId {
 	b := make([]byte, 8)
 	if _, err := rand.Read(b); err != nil {
-		panic(fmt.Sprintf("claude-code-go: crypto/rand unavailable: %v", err))
+		panic(fmt.Sprintf("roster: crypto/rand unavailable: %v", err))
 	}
 	suffix := hex.EncodeToString(b) // 16 hex chars
 	if prefix == "" {

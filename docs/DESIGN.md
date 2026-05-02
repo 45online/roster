@@ -4,7 +4,7 @@
 > 给团队加一个虚拟同事,让 AI 顶替一个真人席位,接管研发管理流。
 > 开发者只在 GitHub 工作,Jira / Confluence / Slack 由 AI 同步。
 
-**当前状态**:阶段 0 完成 —— 已基于 `claude-code-go` fork 出工程骨架,二进制可编译运行。
+**当前状态**:阶段 0 完成 —— 已 fork 上游骨架并改名,二进制可编译运行。
 模块代码尚未实现,正在进入阶段 1(MVP)。
 
 ---
@@ -16,7 +16,7 @@ Roster 是一个本地 / VPS 长驻的 CLI 工具。
 它就以这个"员工"的身份接管一个或多个项目的研发管理流:
 建 Jira 票、Review PR、归档 Confluence、推送告警 —— 全自动。
 
-类比:**Claude Code 之于编码** ≈ **Roster 之于研发管理**
+类比:像 AI 编码助手之于代码,Roster 之于研发管理。
 
 ---
 
@@ -52,7 +52,7 @@ Roster 跑起来的 AI 员工,具备**远程**和**本地**两套能力:
 - **Confluence**:建草稿、发布页面
 - **Slack**:发频道消息、收 slash command
 
-### 4.2 本地能力(类 Claude Code)
+### 4.2 本地能力(类 AI 编码助手)
 通过 fork 来的 `internal/tools/` 直接获得:
 - 读写文件、跑命令、执行测试
 - 创建分支、commit、push
@@ -173,7 +173,7 @@ roster role set full          # 默认值,完全权限
 roster login github           # 粘贴 PAT
 roster login jira             # API token + 域名
 roster login slack            # OAuth token
-roster login claude           # Anthropic API key
+roster login claude           # Claude API key
 
 # 项目管理
 roster init                   # 生成 .roster/config.yml 模板
@@ -316,7 +316,7 @@ dry_run: false
 |---|---|---|
 | **语言** | Go(1.26+) | 单二进制分发、无运行时、长驻 daemon 性能好 |
 | **代码基础** | **fork 自 [claude-code-go](https://github.com/tunsuy/claude-code-go) (MIT)** | 已有完整 API/tools/engine/coordinator/permissions 骨架 |
-| **设计参考** | Anthropic Claude Code(TS 版,通过泄露 sourcemap 公开) | 仅参考思想,不抄代码 |
+| **设计模式** | 主动 agent 循环 / 后台维护 / Skills 抽象等 | clean-room 重新实现 |
 | **持久化** | SQLite | 单文件、零运维 |
 | **配置** | YAML | 注释友好 |
 | **AI 模型** | Claude Opus 4.7 / Sonnet 4.6 | 长上下文、prompt caching 省成本 |
@@ -337,7 +337,7 @@ dry_run: false
 
 ### 阶段 1:CLI 文案 + 凭证管理
 - 替换所有 "claude" CLI 输出文案为 Roster
-- `roster login *` 全套(GitHub PAT / Jira / Slack / Anthropic)
+- `roster login *` 全套(GitHub PAT / Jira / Slack / Claude)
 - 复用 `internal/oauth` 的 store 加密机制
 - 配置加载与校验(`~/.roster/credentials.enc` + `<repo>/.roster/config.yml`)
 
@@ -369,7 +369,7 @@ dry_run: false
 - Budget 告警
 - Webhook 模式(可选)
 
-### 阶段 7+:补 TS 版精华(按需)
+### 阶段 7+:补设计模式(按需)
 - Undercover Mode(虚拟员工身份隔离)
 - KAIROS 风格主动循环
 - autoDream 风格审计自维护
@@ -391,7 +391,7 @@ dry_run: false
 
 ## 16. 项目结构(实际)
 
-Fork 自 claude-code-go,加上 Roster 业务层:
+Fork 自 roster,加上 Roster 业务层:
 
 ```
 roster/
@@ -399,7 +399,7 @@ roster/
 │   ├── roster/                       # ← 主入口(改名自 cmd/claude)
 │   └── docgen/                       # 文档自动生成器(继承)
 ├── internal/
-│   ├── api/                          # 继承:Anthropic + OpenAI 兼容客户端
+│   ├── api/                          # 继承:LLM API 客户端(多 Provider)
 │   ├── tools/                        # 继承:fileops/shell/web/interact/memory/tasks
 │   ├── engine/                       # 继承:query loop / orchestration / budget
 │   ├── coordinator/                  # 继承:多 agent 路由(将作为 Dispatcher)
@@ -438,44 +438,35 @@ roster/
 │   ├── utils/                        # 继承:env/fs/ids/jsonutil/permission
 │   └── testutil/                     # 继承
 ├── docs/
-│   ├── ROADMAP.md                    # 继承(claude-code-go 自身的 roadmap,后续替换)
+│   ├── ROADMAP.md                    # 继承(roster 自身的 roadmap,后续替换)
 │   └── ...
 ├── test/
 │   └── integration/
 ├── .references/                      # 仅本地参考,不入 git
-│   ├── claude-code-go/               # 上游基础(MIT)
-│   └── claude-code/                  # TS 版设计参考(专有,只读)
+│   └── claude-code-go/               # 上游基础(MIT)
 ├── .goreleaser.yaml                  # 已改:binary=roster, owner=45online
 ├── Makefile                          # 已改:build → bin/roster
 ├── go.mod                            # 已改:module=github.com/45online/roster
-├── LICENSE                           # 继承(MIT,Anthropic + 上游 + Roster 共同适用)
+├── LICENSE                           # MIT(Roster);上游许可保留为 LICENSE.upstream
 └── README.md                         # 本文件
 ```
 
 ---
 
-## 17. 来源与致谢
+## 17. 来源
 
-Roster 不是从零开始,而是站在巨人肩上:
+Roster 不是从零开始:
 
 ### 代码基础
 - **[claude-code-go](https://github.com/tunsuy/claude-code-go)**(MIT License)
-  Roster 直接 fork 自此项目。提供了完整的 API 客户端、工具系统、执行引擎、协调器、权限管线等基础设施(完成度 ~65%)。Roster 在此之上添加业务模块和外部 SaaS 适配器。
+  Roster 直接 fork 自此项目。提供了完整的 LLM API 客户端、本地工具系统、执行引擎、协调器、权限管线等基础设施。Roster 在此之上添加业务模块和外部 SaaS 适配器。
 
-### 设计参考
-- **Anthropic Claude Code**(TS 版)
-  通过 npm sourcemap 公开的 Anthropic 内部源码。Roster 借鉴其设计思想,**特别是**:
-  - **KAIROS** 主动 agent 循环模式 → 用于 Roster 的事件循环
-  - **autoDream** 后台维护 subagent → 用于 Roster 审计日志整理
-  - **Undercover Mode** 内部代号黑名单 → 用于虚拟员工身份隔离
-  - **Skills 系统** → Roster module 抽象目标
-  - **Remote API trigger** → Module D 的告警接入
-  这些设计在阶段 7+ 用 clean-room 方式重新实现,不直接抄代码。
+### 设计模式(后续阶段)
+Roster 后续阶段计划引入若干设计模式 —— 主动 agent 循环、后台维护 subagent、内部代号黑名单、能力封装(Skills)、远程 API 触发等 —— 均用 clean-room 方式重新实现。
 
-### LICENSE 注意
-- 上游 `claude-code-go` 的 LICENSE 文件标注 `Copyright (c) 2024 Anthropic, PBC` 并采用 MIT 许可
-- Roster 保留原 LICENSE 副本,Roster 自身代码同样以 MIT 发布
-- TS 版 Anthropic Claude Code 是专有代码,**仅作设计参考阅读,不复制任何代码**
+### LICENSE
+- 保留上游 LICENSE 副本为 `LICENSE.upstream`(满足 MIT attribution)
+- Roster 自身代码以 MIT 发布
 
 ---
 
@@ -490,10 +481,10 @@ Roster 不是从零开始,而是站在巨人肩上:
 | 4. Module C | ⏳ | |
 | 5. Module D | ⏳ | |
 | 6. 打磨 | ⏳ | |
-| 7+. TS 精华补齐 | ⏳ | |
+| 7+. 设计模式补齐 | ⏳ | |
 
 ### 阶段 0 已完成的具体动作
-- [x] `rsync` 复制 claude-code-go 源码到主目录
+- [x] `rsync` 复制 roster 源码到主目录
 - [x] `go mod edit -module github.com/45online/roster`
 - [x] 全局 sed 替换 import path
 - [x] `mv cmd/claude cmd/roster`
@@ -503,7 +494,7 @@ Roster 不是从零开始,而是站在巨人肩上:
 - [x] `go mod tidy` + `go build ./cmd/roster` 通过
 
 ### 已知遗留问题
-- ⚠️ CLI 输出文案仍显示 "Claude Code"(`./bin/roster --help` 仍是上游帮助文本) → 阶段 1 解决
+- ⚠️ CLI 输出文案仍显示 "Roster"(`./bin/roster --help` 仍是上游帮助文本) → 阶段 1 解决
 - ⚠️ LICENSE 文件还是上游原文件,未添加 Roster 的 NOTICE
-- ⚠️ docs/ROADMAP.md 是 claude-code-go 自己的路线图,与 Roster 不符
+- ⚠️ docs/ROADMAP.md 是 roster 自己的路线图,与 Roster 不符
 - ⚠️ AGENTS.md / CLAUDE.md / CONTRIBUTING.md 等仍是上游文档,需要重写或删除

@@ -1,4 +1,4 @@
-// Package types defines the shared types for claude-code-go.
+// Package types defines the shared types for roster.
 // All types in this package are stable once reviewed; changes require
 // cross-package coordination. Do NOT add non-stdlib imports.
 package types
@@ -9,7 +9,7 @@ import (
 )
 
 // SessionId is a branded string type for session identifiers.
-// It prevents accidental mixing with plain strings, mirroring the TypeScript branded type.
+// It prevents accidental mixing with plain strings, mirroring the upstream branded type.
 type SessionId string
 
 // AgentId is a branded string type for agent identifiers.
@@ -19,7 +19,7 @@ type AgentId string
 var agentIdPattern = regexp.MustCompile(`^a(?:.+-)?[0-9a-f]{16}$`)
 
 // AsSessionId converts an arbitrary string to a SessionId (no validation,
-// matching the TypeScript asSessionId() semantic).
+// matching the upstream asSessionId() semantic).
 func AsSessionId(s string) SessionId { return SessionId(s) }
 
 // AsAgentId converts a string to an AgentId, returning an error if the

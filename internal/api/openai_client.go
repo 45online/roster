@@ -141,7 +141,7 @@ func (c *openaiClient) buildRequest(ctx context.Context, req *MessageRequest) (*
 	return httpReq, nil
 }
 
-// convertToOpenAIRequest converts Anthropic MessageRequest to OpenAI ChatCompletionRequest.
+// convertToOpenAIRequest converts Claude MessageRequest to OpenAI ChatCompletionRequest.
 func (c *openaiClient) convertToOpenAIRequest(req *MessageRequest) *openaiChatCompletionRequest {
 	openaiReq := &openaiChatCompletionRequest{
 		Model:     req.Model,
@@ -182,7 +182,7 @@ func (c *openaiClient) convertToOpenAIRequest(req *MessageRequest) *openaiChatCo
 	return openaiReq
 }
 
-// convertMessage converts an Anthropic message to OpenAI message(s).
+// convertMessage converts a Claude message to OpenAI message(s).
 func (c *openaiClient) convertMessage(msg MessageParam) []openaiMessage {
 	var result []openaiMessage
 
@@ -350,7 +350,7 @@ func joinStrings(strs []string, sep string) string {
 	return result
 }
 
-// convertRole converts Anthropic role to OpenAI role.
+// convertRole converts Claude role to OpenAI role.
 func (c *openaiClient) convertRole(role string) string {
 	switch role {
 	case "user":
@@ -362,7 +362,7 @@ func (c *openaiClient) convertRole(role string) string {
 	}
 }
 
-// convertToMessageResponse converts OpenAI response to Anthropic MessageResponse.
+// convertToMessageResponse converts OpenAI response to Claude MessageResponse.
 func (c *openaiClient) convertToMessageResponse(resp *openaiChatCompletionResponse) *MessageResponse {
 	msgResp := &MessageResponse{
 		ID:    resp.ID,

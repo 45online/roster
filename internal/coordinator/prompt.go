@@ -1,7 +1,7 @@
 // Package coordinator – coordinator system-prompt helpers.
 //
 // GetCoordinatorSystemPrompt and GetCoordinatorUserContext mirror the
-// TypeScript coordinatorMode.ts helpers that inject the coordinator role
+// upstream coordinator helpers that inject the coordinator role
 // definition and worker capability information into the system prompt.
 //
 // Design reference: docs/project/design/core.md §6.4

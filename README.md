@@ -38,7 +38,7 @@ GitHub  ←→  Roster (AI 员工)  ←→  Jira / Confluence / Slack
 - **Slack = 实时感知**:AI 推送告警 / 通知 / Review 摘要
 - **AI 员工 = 虚拟真人账户**:不是 `[bot]` 标记,是有名字、有头像、像真人一样的 GitHub collaborator,只是所有操作由 Roster 代理
 
-类比:**Claude Code 之于编码 ≈ Roster 之于研发管理**。
+类比:像 AI 编码助手之于代码,**Roster 之于研发管理**。
 
 ---
 
@@ -60,7 +60,7 @@ GitHub  ←→  Roster (AI 员工)  ←→  Jira / Confluence / Slack
 ### 前置要求
 - Go 1.26+
 - 一个虚拟员工身份的 GitHub 账户(配 PAT)
-- Anthropic API key
+- Claude API key
 - (可选)Jira / Confluence / Slack 的 API token
 
 ### 从源码构建
@@ -75,7 +75,7 @@ make build
 ```bash
 # 一次性凭证
 roster login github          # 粘贴 PAT
-roster login claude          # Anthropic API key
+roster login claude          # Claude API key
 roster login jira            # 可选
 roster login slack           # 可选
 
@@ -104,12 +104,9 @@ roster pause <project>       # kill switch
 
 ---
 
-## 来源与致谢
+## 来源
 
-Roster 站在巨人肩上:
-
-- **代码基础**:fork 自 [claude-code-go](https://github.com/tunsuy/claude-code-go) (MIT)。提供完整的 Anthropic API 客户端、本地工具系统(fileops / shell / web / interact)、执行引擎、协调器、9 步权限管线等基础设施。Roster 在此之上添加业务模块和外部 SaaS 适配器。
-- **设计参考**:Anthropic Claude Code(TypeScript)。借鉴 KAIROS 主动循环、autoDream 维护 subagent、Undercover Mode、Skills 抽象等设计思想 —— 仅作概念参考,不复制代码。
+Roster 基于 [claude-code-go](https://github.com/tunsuy/claude-code-go)(MIT)构建,直接复用了其完整的 LLM API 客户端、本地工具系统(fileops / shell / web / interact)、执行引擎、协调器、9 步权限管线等基础设施。Roster 在此之上添加业务模块和外部 SaaS 适配器。
 
 详见 [NOTICE](NOTICE)。
 
@@ -117,7 +114,4 @@ Roster 站在巨人肩上:
 
 ## License
 
-[MIT](LICENSE)
-
-Copyright (c) 2026 Roster contributors
-Copyright (c) 2024 Anthropic, PBC (upstream code via claude-code-go)
+[MIT](LICENSE) — 详见 [LICENSE](LICENSE) 与 [LICENSE.upstream](LICENSE.upstream)。

@@ -1,4 +1,4 @@
-// Package api provides the Anthropic API client implementation.
+// Package api provides the Claude API client implementation.
 package api
 
 import (
@@ -10,7 +10,7 @@ import (
 	"net/http"
 )
 
-// Client is the unified Anthropic API entry point.
+// Client is the unified Claude API entry point.
 // Supports Direct, Bedrock, Vertex, and Foundry providers.
 type Client interface {
 	// Stream initiates a streaming message request and returns an SSE event stream.
@@ -57,7 +57,7 @@ type ToolSchema struct {
 	InputSchema json.RawMessage `json:"input_schema"`
 }
 
-// MessageRequest corresponds to the Anthropic Messages API request body.
+// MessageRequest corresponds to the Claude Messages API request body.
 type MessageRequest struct {
 	Model          string         `json:"model"`
 	MaxTokens      int            `json:"max_tokens"`
@@ -85,7 +85,7 @@ type MessageResponse struct {
 // Compile-time interface assertion: directClient must satisfy Client.
 var _ Client = (*directClient)(nil)
 
-// directClient implements Client using the Anthropic Direct API.
+// directClient implements Client using the Claude Direct API.
 type directClient struct {
 	apiKey     string
 	baseURL    string

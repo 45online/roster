@@ -25,7 +25,7 @@ type OAuthConfig struct {
 	APIKeyURL              string
 }
 
-// DefaultOAuthConfig returns the standard Anthropic OAuth configuration.
+// DefaultOAuthConfig returns the standard Claude OAuth configuration.
 func DefaultOAuthConfig() OAuthConfig {
 	return OAuthConfig{
 		ClientID:             "9d1c250a-e61b-44d9-88ed-5944d1962f5e",

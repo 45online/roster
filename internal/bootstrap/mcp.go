@@ -13,7 +13,7 @@ import (
 	"github.com/45online/roster/internal/tools"
 )
 
-// newMCPCmd creates the `claude mcp` subcommand tree.
+// newMCPCmd creates the `roster mcp` subcommand tree.
 func newMCPCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:          "mcp",
@@ -85,7 +85,7 @@ func runMCPServe(container *AppContainer) error {
 				ID:      req.ID,
 				Result: mustMarshalJSON(map[string]any{
 					"protocolVersion": "2024-11-05",
-					"serverInfo":      map[string]any{"name": "claude-code-go", "version": appVersion},
+					"serverInfo":      map[string]any{"name": "roster", "version": appVersion},
 					"capabilities":    map[string]any{"tools": map[string]any{}},
 				}),
 			}

@@ -1,4 +1,4 @@
-// Package oauth provides OAuth2 PKCE authentication for Claude Code.
+// Package oauth provides OAuth2 PKCE authentication for Roster.
 package oauth
 
 // OAuthTokens stores a complete OAuth token set.

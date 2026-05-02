@@ -43,10 +43,10 @@ func (w WelcomeHeader) IsShown() bool {
 // View renders the welcome header banner.
 // Format:
 //
-//	     Claude Code Go v0.1.0
+//	     Roster v0.1.0
 //	     claude-sonnet-4-20250514 · API Usage Billing
 //	     ~/path/to/cwd
-//	     Welcome to Claude Code Go!  /effort to tune speed vs. intelligence
+//	     Welcome to Roster!  /effort to tune speed vs. intelligence
 func (w WelcomeHeader) View(width int, theme Theme) string {
 	if w.shown {
 		return ""
@@ -58,7 +58,7 @@ func (w WelcomeHeader) View(width int, theme Theme) string {
 	logo := renderLogo(theme)
 
 	// Version line
-	versionLine := primaryStyle(theme).Bold(true).Render(fmt.Sprintf("Claude Code Go v%s", w.version))
+	versionLine := primaryStyle(theme).Bold(true).Render(fmt.Sprintf("Roster v%s", w.version))
 
 	// Model + billing info
 	modelStr := w.model
@@ -78,7 +78,7 @@ func (w WelcomeHeader) View(width int, theme Theme) string {
 	// Welcome message
 	welcomeLine := lipgloss.JoinHorizontal(
 		lipgloss.Left,
-		successStyle(theme).Render("Welcome to Claude Code Go!"),
+		successStyle(theme).Render("Welcome to Roster!"),
 		mutedStyle(theme).Render("  "),
 		accentStyle(theme).Render("/effort"),
 		mutedStyle(theme).Render(" to tune speed vs. intelligence"),
@@ -107,20 +107,20 @@ func (w WelcomeHeader) View(width int, theme Theme) string {
 	return sb.String()
 }
 
-// renderLogo renders the ASCII art logo without ears for a cleaner look.
+// renderLogo renders the Roster ASCII art logo: a tiny employee with an
+// ID badge — visualising "AI as a virtual coworker holding a roster slot".
 func renderLogo(theme Theme) string {
-	// ASCII art - removed the ears (\_/) for cleaner appearance
 	logoLines := []string{
 		"  (•‿•) ",
-		" /|░░░|\\",
-		"( |░░░| )",
-		"  \"^ ^\" ",
+		" ┌─────┐",
+		" │ID#01│",
+		" └─────┘",
 	}
 
-	// Use cyan/teal color for Go Gopher
-	gopherColor := lipgloss.Color("#00ADD8") // Go's official cyan color
+	// Roster brand color: indigo — AI assistant identity
+	rosterColor := lipgloss.Color("#6366F1")
 	logoStyle := lipgloss.NewStyle().
-		Foreground(gopherColor).
+		Foreground(rosterColor).
 		Bold(true)
 
 	var rendered []string

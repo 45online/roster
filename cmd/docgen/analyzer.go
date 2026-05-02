@@ -114,9 +114,9 @@ func analyzePackage(dir string, moduleRoot string) (*PackageInfo, error) {
 		// Collect imports.
 		for _, imp := range file.Imports {
 			path := strings.Trim(imp.Path.Value, `"`)
-			if strings.Contains(path, "claude-code-go/") {
+			if strings.Contains(path, "roster/") {
 				// Extract relative path.
-				parts := strings.SplitN(path, "claude-code-go/", 2)
+				parts := strings.SplitN(path, "roster/", 2)
 				if len(parts) == 2 {
 					importSet[parts[1]] = true
 				}

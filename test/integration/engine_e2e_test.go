@@ -1,6 +1,6 @@
 //go:build integration
 
-// Package integration contains end-to-end tests for the claude-code-go engine.
+// Package integration contains end-to-end tests for the roster engine.
 // Run with: go test -race -tags=integration ./test/integration/...
 package integration
 

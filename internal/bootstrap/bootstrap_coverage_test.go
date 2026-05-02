@@ -121,8 +121,8 @@ func TestBuildRootCmd_Interactive_HasSubcommands(t *testing.T) {
 
 func TestBuildRootCmd_Name(t *testing.T) {
 	cmd := buildRootCmd(true)
-	if cmd.Name() != "claude" {
-		t.Errorf("expected root command name %q, got %q", "claude", cmd.Name())
+	if cmd.Name() != "roster" {
+		t.Errorf("expected root command name %q, got %q", "roster", cmd.Name())
 	}
 }
 

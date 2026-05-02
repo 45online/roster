@@ -97,7 +97,7 @@ func scopeHeader(scope MemoryScope) string {
 // It combines traditional CLAUDE.md discovery with the project's MEMORY.md index.
 // Only the index is injected into the system prompt; individual memory files
 // are read on demand by the LLM using MemoryRead, consistent with how the
-// original Claude Code (TypeScript) implementation works.
+// original upstream implementation works.
 func LoadAllMemory(claudeMdPaths []string, store *MemoryStore) string {
 	var sb strings.Builder
 

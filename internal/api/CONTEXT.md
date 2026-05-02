@@ -13,7 +13,7 @@ source_files: [accumulate.go, client.go, debug_logger.go, errors.go, factory.go,
 ## Interfaces
 
 ### Client (2 methods)
-> Client is the unified Anthropic API entry point.
+> Client is the unified Claude API entry point.
 
 ```go
 type Client interface {

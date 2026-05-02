@@ -1,6 +1,6 @@
 package api
 
-// Usage corresponds to the Anthropic Beta Messages API usage fields.
+// Usage corresponds to the Claude Beta Messages API usage fields.
 type Usage struct {
 	InputTokens              int               `json:"input_tokens"`
 	CacheCreationInputTokens int               `json:"cache_creation_input_tokens"`

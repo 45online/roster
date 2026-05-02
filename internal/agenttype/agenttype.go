@@ -17,7 +17,7 @@ const (
 	AgentTypePlan AgentType = "plan"
 	// AgentTypeVerify runs tests and linting to validate changes.
 	AgentTypeVerify AgentType = "verify"
-	// AgentTypeGuide helps with Claude Code usage and documentation.
+	// AgentTypeGuide helps with Roster usage and documentation.
 	AgentTypeGuide AgentType = "guide"
 	// AgentTypeCustom is for user-defined agent types loaded from .claude/agents/.
 	AgentTypeCustom AgentType = "custom"

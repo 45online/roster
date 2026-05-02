@@ -1,4 +1,4 @@
-// Package api provides the Anthropic API client implementation.
+// Package api provides the Claude API client implementation.
 package api
 
 import (

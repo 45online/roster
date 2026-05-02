@@ -87,7 +87,7 @@ func (d PermissionDialog) Confirm() bool {
 	return d.cursor == 0 || d.cursor == 1
 }
 
-// View renders the permission dialog matching the original Claude Code style.
+// View renders the permission dialog matching the original Roster style.
 func (d PermissionDialog) View(width int, theme Theme) string {
 	border := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).

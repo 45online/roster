@@ -1,5 +1,5 @@
 // Package commands implements the slash command registry and built-in commands
-// for the Claude Code TUI.
+// for the Roster TUI.
 package commands
 
 import (

@@ -45,7 +45,7 @@ type MessageLookups struct {
 }
 
 // buildMessageLookups creates precomputed indexes for message rendering.
-// This mirrors the TypeScript buildMessageLookups function.
+// This mirrors the upstream buildMessageLookups function.
 func buildMessageLookups(messages []types.Message) MessageLookups {
 	lookups := MessageLookups{
 		ToolUseToResult:      make(map[string]types.ContentBlock),
@@ -216,14 +216,14 @@ func renderUserMessage(msg types.Message, theme Theme) string {
 
 // renderAssistantMessage renders an assistant turn, including markdown and tool
 // use blocks. Tool results are displayed inline after their corresponding tool_use.
-// Matches the original TypeScript Claude Code display format.
+// Matches the upstream display format.
 func renderAssistantMessage(msg types.Message, width int, darkMode bool, theme Theme, mdRenderer *glamour.TermRenderer, expandedToolResults map[string]bool, lookups MessageLookups) string {
 	var sb strings.Builder
 	for _, blk := range msg.Content {
 		switch blk.Type {
 		case types.ContentTypeText:
 			if blk.Text != nil && *blk.Text != "" {
-				// Render text with bullet prefix, same as original Claude Code
+				// Render text with bullet prefix, same as original Roster
 				sb.WriteString(renderTextBlock(*blk.Text, width, darkMode, theme, mdRenderer))
 			}
 		case types.ContentTypeThinking:
@@ -252,7 +252,7 @@ func renderAssistantMessage(msg types.Message, width int, darkMode bool, theme T
 }
 
 // renderTextBlock renders a text content block with bullet prefix.
-// Format: ● text content (matches original Claude Code style)
+// Format: ● text content (matches original Roster style)
 func renderTextBlock(text string, width int, darkMode bool, _ Theme, mdRenderer *glamour.TermRenderer) string {
 	var sb strings.Builder
 	bullet := blackCircle() + " "
@@ -309,7 +309,7 @@ func renderThinkingBlock(text string, theme Theme) string {
 	return sb.String()
 }
 
-// renderToolUseBlock renders a tool_use content block in Claude Code style.
+// renderToolUseBlock renders a tool_use content block in Roster style.
 // Format: ● ToolName(args)
 // The bullet color indicates status:
 // - Gray/dim: queued or in progress
@@ -424,8 +424,8 @@ func toString(v any) string {
 	}
 }
 
-// renderToolResultBlock renders a tool_result content block in Claude Code style.
-// Format matches original TypeScript version:
+// renderToolResultBlock renders a tool_result content block in Roster style.
+// Format matches original upstream version:
 //
 //	│ first line of output
 //	│ second line
@@ -436,7 +436,7 @@ func renderToolResultBlock(blk types.ContentBlock, theme Theme, expanded bool) s
 	var sb strings.Builder
 	isError := blk.IsError != nil && *blk.IsError
 
-	// Vertical bar prefix for tool result (matches original Claude Code)
+	// Vertical bar prefix for tool result (matches original Roster)
 	barPrefix := mutedStyle(theme).Render("│ ")
 	errorBarPrefix := errorStyle(theme).Render("│ ")
 
