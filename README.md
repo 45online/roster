@@ -30,7 +30,8 @@ GitHub  ←→  Roster (AI 员工)  ←→  Jira / Confluence / Slack
 | 3. Module B: PR AI Review(`review-pr` + 接入 takeover) | ✅ 已完成 |
 | 4. Module C: Issue close → Confluence(`archive-issue` + 接入 takeover) | ✅ 已完成 |
 | 5. Module D: 告警聚合 → Slack(`aggregate-alert`,无 AI 纯模板) | ✅ 已完成 |
-| 6. 打磨(webhook 模式 / `roster status` / Budget 告警) | ⏳ 下一步 |
+| 6.a `roster status` + `roster logs` 观察面板 | ✅ 已完成 |
+| 6.b Webhook 模式 + Budget 跟踪 + 告警 | ⏳ 下一步 |
 
 二进制可编译运行,Module A 已可通过 `roster sync-issue` 手动触发完成
 GitHub Issue → Jira 的端到端同步。后台 poller 与其他模块尚未实现。
@@ -209,6 +210,40 @@ _Repo: <https://github.com/owner/name|owner/name>_
 ```
 
 **设计哲学**:Module D 是"日志看板"角色 —— 列举近期活动让 oncall 自己判断,不归因、不 at 人、不建票。错误归因比没有归因更糟。
+
+### 观察面板
+
+`roster status` —— 一屏看全:凭证状态 / 接管的项目 / 最近 24h 各模块调用统计 / 最新错误。
+
+```
+Roster status — 2026-05-03T14:23:00Z
+Base dir: /Users/me/.roster
+
+Credentials:
+  github  ✓ configured
+  jira    ✓ configured
+  slack   ✗ not set
+  claude  ✓ configured
+
+Projects (1, last 24h):
+
+  foo/bar
+    cursor       last polled 30m ago, event_id=…
+    audit        3 events: 2 success, 0 partial, 1 error, 0 skipped
+    by module    issue_to_jira=1, pr_review=2
+    last event   15m ago
+    last error   15m ago — diff too large
+```
+
+`roster logs <repo>` —— 看单项目的审计流(可加 `--module` / `--status` / `--since 30m` / `-f` follow):
+
+```
+$ roster logs foo/bar --status error -f
+2026-05-03T14:25Z [pr_review/error] foo/bar#3 by @carol [50ms]  ! diff too large
+2026-05-03T14:30Z [issue_to_jira/error] foo/bar#7 by @alice [820ms]  ! create jira issue: 401 Unauthorized
+```
+
+`--json` 标志在两个命令上都可用,方便接外部监控。
 
 **C. 启用 Claude 智能字段抽取(可选)**
 

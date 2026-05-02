@@ -96,6 +96,8 @@ func buildRootCmd(headless bool) *cobra.Command {
 			newInstallCmd(),
 			newRosterInitCmd(),     // Roster: scaffold .roster/config.yml
 			newLoginCmd(),          // Roster: store provider credentials
+			newRosterStatusCmd(),   // Roster: dashboard
+			newRosterLogsCmd(),     // Roster: tail audit log
 			newSyncIssueCmd(),      // Roster Module A (manual one-shot)
 			newReviewPRCmd(),       // Roster Module B (manual one-shot)
 			newArchiveIssueCmd(),   // Roster Module C (manual one-shot)
