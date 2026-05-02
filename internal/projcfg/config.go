@@ -23,10 +23,10 @@ type Config struct {
 
 // Modules toggles and configures each Roster module.
 type Modules struct {
-	IssueToJira       IssueToJira      `yaml:"issue_to_jira"`
-	PRReview          PRReview         `yaml:"pr_review"`
-	IssueToConfluence ModuleToggle     `yaml:"issue_to_confluence"`
-	AlertAggregation  AlertAggregation `yaml:"alert_aggregation"`
+	IssueToJira       IssueToJira       `yaml:"issue_to_jira"`
+	PRReview          PRReview          `yaml:"pr_review"`
+	IssueToConfluence IssueToConfluence `yaml:"issue_to_confluence"`
+	AlertAggregation  AlertAggregation  `yaml:"alert_aggregation"`
 }
 
 // ModuleToggle is a simple enabled-flag for modules not yet implemented.
@@ -41,6 +41,21 @@ type IssueToJira struct {
 	DefaultIssueType string            `yaml:"default_issue_type"`
 	PriorityMapping  map[string]string `yaml:"priority_mapping"`
 	LabelToIssueType map[string]string `yaml:"label_to_issue_type"`
+}
+
+// IssueToConfluence configures Module C.
+type IssueToConfluence struct {
+	Enabled bool `yaml:"enabled"`
+	// SpaceID is the numeric Confluence space ID where drafts are filed.
+	SpaceID string `yaml:"space_id"`
+	// ParentPageID nests drafts under a parent page (optional).
+	ParentPageID string `yaml:"parent_page_id"`
+	// CompletedLabel gates archival to issues that carry it. Default
+	// "completed".
+	CompletedLabel string `yaml:"completed_label"`
+	// SlackChannel receives a notification with the draft URL. Empty →
+	// no Slack notification.
+	SlackChannel string `yaml:"slack_channel"`
 }
 
 // PRReview configures Module B.

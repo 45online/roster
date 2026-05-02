@@ -12,10 +12,13 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/45online/roster/internal/adapters/confluence"
 	gh "github.com/45online/roster/internal/adapters/github"
 	"github.com/45online/roster/internal/adapters/jira"
+	"github.com/45online/roster/internal/adapters/slack"
 	"github.com/45online/roster/internal/api"
 	"github.com/45online/roster/internal/audit"
+	"github.com/45online/roster/internal/modules/issue_to_confluence"
 	"github.com/45online/roster/internal/modules/issue_to_jira"
 	"github.com/45online/roster/internal/modules/pr_review"
 	"github.com/45online/roster/internal/poller"
@@ -128,6 +131,37 @@ Credentials (env vars):
 				}
 			}
 
+			// Module C (Issue close → Confluence draft): enabled by config +
+			// Claude + Atlassian credentials.
+			var modC *issue_to_confluence.Module
+			if cfg.Modules.IssueToConfluence.Enabled {
+				switch {
+				case apiClient == nil:
+					fmt.Fprintln(os.Stderr, "⚠ issue_to_confluence.enabled=true but no Claude API key — Module C disabled")
+				case cfg.Modules.IssueToConfluence.SpaceID == "":
+					fmt.Fprintln(os.Stderr, "⚠ issue_to_confluence.enabled=true but space_id is empty — Module C disabled")
+				default:
+					confClient := confluence.NewClient(jiraURL, jiraEmail, jiraToken)
+					var slackCli *slack.Client
+					if cfg.Modules.IssueToConfluence.SlackChannel != "" {
+						if s := r.load(); s.Has("slack") {
+							slackCli = slack.NewClient(s.Slack.Token)
+						} else if tok := os.Getenv("ROSTER_SLACK_TOKEN"); tok != "" {
+							slackCli = slack.NewClient(tok)
+						} else {
+							fmt.Fprintln(os.Stderr, "⚠ slack_channel set but no Slack token; Module C will skip notifications")
+						}
+					}
+					modC = issue_to_confluence.New(ghClient, confClient, slackCli, apiClient, "", issue_to_confluence.Config{
+						SpaceID:        cfg.Modules.IssueToConfluence.SpaceID,
+						ParentPageID:   cfg.Modules.IssueToConfluence.ParentPageID,
+						CompletedLabel: cfg.Modules.IssueToConfluence.CompletedLabel,
+						SlackChannel:   cfg.Modules.IssueToConfluence.SlackChannel,
+					}).WithAudit(recorder)
+					fmt.Println("✓ Module C (issue archive) armed")
+				}
+			}
+
 			ctx, cancel := signalContext()
 			defer cancel()
 
@@ -144,25 +178,45 @@ Credentials (env vars):
 					if err != nil {
 						return err
 					}
-					if p.Action != "opened" {
+					switch p.Action {
+					case "opened":
+						log.Printf("[mod-a] dispatching: %s#%d %q (by @%s)",
+							repo, p.Issue.Number, p.Issue.Title, ev.Actor.Login)
+						res, err := modA.SyncIssue(ctx, repo, p.Issue.Number)
+						if err != nil && res == nil {
+							return err
+						}
+						if err != nil {
+							log.Printf("[mod-a] partial: %s created, comment failed: %v", res.JiraKey, err)
+							return nil
+						}
+						marker := ""
+						if res.AIExtracted {
+							marker = " (AI-extracted)"
+						}
+						log.Printf("[mod-a] ✓ %s%s → %s", res.JiraKey, marker, res.JiraURL)
+						return nil
+					case "closed":
+						if modC == nil {
+							return nil
+						}
+						log.Printf("[mod-c] dispatching: %s#%d closed (by @%s)",
+							repo, p.Issue.Number, ev.Actor.Login)
+						res, err := modC.ArchiveIssue(ctx, repo, p.Issue.Number)
+						if err != nil && res == nil {
+							return err
+						}
+						if err != nil {
+							log.Printf("[mod-c] partial: %s created, slack failed: %v", res.PageID, err)
+							return nil
+						}
+						if res.Skipped {
+							log.Printf("[mod-c] ⏭  skipped: %s", res.Reason)
+							return nil
+						}
+						log.Printf("[mod-c] ✓ draft %s → %s", res.PageID, res.PageURL)
 						return nil
 					}
-					log.Printf("[mod-a] dispatching: %s#%d %q (by @%s)",
-						repo, p.Issue.Number, p.Issue.Title, ev.Actor.Login)
-
-					res, err := modA.SyncIssue(ctx, repo, p.Issue.Number)
-					if err != nil && res == nil {
-						return err
-					}
-					if err != nil {
-						log.Printf("[mod-a] partial: %s created, comment failed: %v", res.JiraKey, err)
-						return nil
-					}
-					marker := ""
-					if res.AIExtracted {
-						marker = " (AI-extracted)"
-					}
-					log.Printf("[mod-a] ✓ %s%s → %s", res.JiraKey, marker, res.JiraURL)
 					return nil
 
 				case "PullRequestEvent":

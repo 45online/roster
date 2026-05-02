@@ -28,8 +28,8 @@ GitHub  ←→  Roster (AI 员工)  ←→  Jira / Confluence / Slack
 | 2.z₁. JSONL 审计日志 + `.roster/config.yml` + `roster init` | ✅ 已完成 |
 | 2.z₂. `roster login` 凭证管理 | ✅ 已完成 |
 | 3. Module B: PR AI Review(`review-pr` + 接入 takeover) | ✅ 已完成 |
-| 4. Module C: Issue close → Confluence | ⏳ 下一步 |
-| 5. Module D: 告警聚合 → Slack | ⏳ |
+| 4. Module C: Issue close → Confluence(`archive-issue` + 接入 takeover) | ✅ 已完成 |
+| 5. Module D: 告警聚合 → Slack | ⏳ 下一步 |
 
 二进制可编译运行,Module A 已可通过 `roster sync-issue` 手动触发完成
 GitHub Issue → Jira 的端到端同步。后台 poller 与其他模块尚未实现。
@@ -145,6 +145,33 @@ modules:
 ```
 
 `roster takeover` 会在 PR opened / synchronize 事件触发 review,draft PR 自动跳过。
+
+**E. Module C:Issue close → Confluence 草稿**
+
+需要 Atlassian 凭证(`roster login jira` —— Confluence 复用同一组)+ Claude 凭证。Slack 通知是可选的。
+
+手动一次性:
+```bash
+./bin/roster archive-issue \
+  --repo owner/name --issue 42 \
+  --space-id 12345 \
+  --slack-channel "#archives"   # 可选
+# → ✓ Draft created (id=987654)
+#   https://yourorg.atlassian.net/wiki/...
+# 草稿仅 owner 可见,真人在 Confluence 点 Publish 才会公开
+```
+
+后台 daemon(`.roster/config.yml`):
+```yaml
+modules:
+  issue_to_confluence:
+    enabled: true
+    space_id: "12345"
+    completed_label: completed   # 只归档带这个 label 的 closed issue
+    slack_channel: "#archives"   # 可选
+```
+
+`roster takeover` 会在 issue closed 事件触发归档。如果没有 `completed` label,会被 skip,审计里有记录但不创建草稿。
 
 **C. 启用 Claude 智能字段抽取(可选)**
 

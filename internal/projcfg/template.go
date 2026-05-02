@@ -34,9 +34,14 @@ modules:
     can_approve: false
     can_request_changes: false
 
-  # Module C — archive closed Issue threads to Confluence as drafts. (not yet)
+  # Module C — archive closed Issue threads to Confluence as drafts.
+  # Uses the same Atlassian credentials as Jira ('roster login jira').
   issue_to_confluence:
     enabled: false
+    space_id: ""             # numeric Confluence space ID (REQUIRED if enabled)
+    parent_page_id: ""       # optional: nest drafts under this page
+    completed_label: completed   # only archive issues carrying this label
+    slack_channel: ""        # optional: post a draft URL here ('roster login slack')
 
   # Module D — aggregate external alerts into a Slack channel. (not yet)
   alert_aggregation:

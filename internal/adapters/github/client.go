@@ -80,6 +80,44 @@ func (c *Client) GetIssue(ctx context.Context, repo string, number int) (*Issue,
 	return &out, nil
 }
 
+// IssueComment is a single comment on an issue (or PR).
+type IssueComment struct {
+	ID      int64  `json:"id"`
+	User    User   `json:"user"`
+	Body    string `json:"body"`
+	HTMLURL string `json:"html_url"`
+}
+
+// ListIssueComments fetches all comments on an issue. Used by Module C to
+// build the Confluence draft summary. Pagination is intentionally not
+// followed past the first 100 — issues with hundreds of comments are
+// summarised by their head; the link back to GitHub covers the rest.
+func (c *Client) ListIssueComments(ctx context.Context, repo string, number int) ([]IssueComment, error) {
+	url := fmt.Sprintf("%s/repos/%s/issues/%d/comments?per_page=100", apiBase, repo, number)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	c.setAuth(req)
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("github: ListIssueComments %s#%d: %s: %s", repo, number, resp.Status, strings.TrimSpace(string(body)))
+	}
+
+	var out []IssueComment
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return nil, fmt.Errorf("github: decode comments: %w", err)
+	}
+	return out, nil
+}
+
 // CreateComment posts a comment on an issue or pull request.
 func (c *Client) CreateComment(ctx context.Context, repo string, number int, body string) error {
 	url := fmt.Sprintf("%s/repos/%s/issues/%d/comments", apiBase, repo, number)
