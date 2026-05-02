@@ -1,0 +1,22 @@
+Roster
+======
+
+Roster is licensed under the MIT License (see LICENSE).
+
+This project is a fork of and built on top of:
+
+  claude-code-go
+    Repository: https://github.com/tunsuy/claude-code-go
+    License:    MIT (see LICENSE.upstream for the original license text)
+    Copyright:  (c) 2024 Anthropic, PBC
+
+Roster retains the upstream license file as `LICENSE.upstream` to satisfy
+the MIT attribution requirement, and applies the same MIT terms to all
+Roster-specific additions and modifications.
+
+Roster also draws design inspiration (but no code) from Anthropic's
+Claude Code TypeScript implementation, which is proprietary software
+belonging to Anthropic, PBC. Any conceptual borrowings (e.g. KAIROS-like
+proactive loops, autoDream-style maintenance subagents, Undercover Mode,
+Skills abstraction, Remote API trigger pattern) are reimplemented from
+scratch in Go without copying source from that codebase.

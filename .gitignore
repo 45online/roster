@@ -1,0 +1,30 @@
+# Binaries / build output
+bin/
+dist/
+
+# Test / coverage
+coverage.out
+coverage.html
+*.test
+*.out
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Local settings (machine-specific permissions)
+.claude/settings.local.json
+
+# Local references (upstream source / proprietary design refs — not for commit)
+.references/
+
+# Roster runtime state (project-local config + audit logs)
+.roster/
+*.db
+*.sqlite
+*.sqlite-journal
+
+# Go vendor (just in case)
+vendor/

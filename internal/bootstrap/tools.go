@@ -1,0 +1,70 @@
+package bootstrap
+
+import (
+	"github.com/45online/roster/internal/tools"
+	"github.com/45online/roster/internal/tools/agent"
+	"github.com/45online/roster/internal/tools/fileops"
+	"github.com/45online/roster/internal/tools/interact"
+	"github.com/45online/roster/internal/tools/memory"
+	"github.com/45online/roster/internal/tools/misc"
+	"github.com/45online/roster/internal/tools/mcp"
+	"github.com/45online/roster/internal/tools/shell"
+	"github.com/45online/roster/internal/tools/tasks"
+	"github.com/45online/roster/internal/tools/web"
+)
+
+// RegisterBuiltinTools registers all built-in tool singletons into reg.
+// Order follows the canonical tool ordering in the TS implementation.
+func RegisterBuiltinTools(reg *tools.Registry) {
+	// ── File operations ──────────────────────────────────────────────────────
+	reg.Register(fileops.FileReadTool)
+	reg.Register(fileops.FileWriteTool)
+	reg.Register(fileops.FileEditTool)
+	reg.Register(fileops.NotebookEditTool)
+	reg.Register(fileops.GrepTool)
+	reg.Register(fileops.GlobTool)
+
+	// ── Shell ────────────────────────────────────────────────────────────────
+	reg.Register(shell.BashTool)
+
+	// ── Web ──────────────────────────────────────────────────────────────────
+	reg.Register(web.WebSearchTool)
+	reg.Register(web.WebFetchTool)
+
+	// ── Task management ──────────────────────────────────────────────────────
+	reg.Register(tasks.TaskCreateTool)
+	reg.Register(tasks.TaskGetTool)
+	reg.Register(tasks.TaskListTool)
+	reg.Register(tasks.TaskUpdateTool)
+	reg.Register(tasks.TaskStopTool)
+	reg.Register(tasks.TaskOutputTool)
+
+	// ── Agent ────────────────────────────────────────────────────────────────
+	reg.Register(agent.AgentTool)
+	reg.Register(agent.SendMessageTool)
+	reg.Register(agent.GetAgentStatusTool)
+
+	// ── Interaction / plan mode ──────────────────────────────────────────────
+	reg.Register(interact.TodoWriteTool)
+	reg.Register(interact.AskUserQuestionTool)
+	reg.Register(interact.EnterPlanModeTool)
+	reg.Register(interact.ExitPlanModeTool)
+	reg.Register(interact.EnterWorktreeTool)
+	reg.Register(interact.ExitWorktreeTool)
+
+	// ── MCP meta-tools ───────────────────────────────────────────────────────
+	reg.Register(mcp.ListMcpResourcesTool)
+	reg.Register(mcp.ReadMcpResourceTool)
+
+	// ── Misc ─────────────────────────────────────────────────────────────────
+	reg.Register(misc.SkillTool)
+	reg.Register(misc.BriefTool)
+	reg.Register(misc.ToolSearchTool)
+	reg.Register(misc.SleepTool)
+	reg.Register(misc.SyntheticOutputTool)
+
+	// ── Memory ────────────────────────────────────────────────────────────────
+	reg.Register(memory.MemoryReadTool)
+	reg.Register(memory.MemoryWriteTool)
+	reg.Register(memory.MemoryDeleteTool)
+}
