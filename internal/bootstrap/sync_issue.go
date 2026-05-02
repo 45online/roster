@@ -10,6 +10,7 @@ import (
 	gh "github.com/45online/roster/internal/adapters/github"
 	"github.com/45online/roster/internal/adapters/jira"
 	"github.com/45online/roster/internal/api"
+	"github.com/45online/roster/internal/audit"
 	"github.com/45online/roster/internal/modules/issue_to_jira"
 )
 
@@ -61,6 +62,7 @@ Credentials are read from environment variables:
 
 			ghClient := gh.NewClient(ghToken)
 			jiraClient := jira.NewClient(jiraURL, jiraEmail, jiraToken)
+			recorder := audit.NewRecorder(audit.DefaultBaseDir())
 			mod := issue_to_jira.New(ghClient, jiraClient, issue_to_jira.Config{
 				JiraProject:      jiraProject,
 				DefaultIssueType: defaultType,
@@ -70,7 +72,7 @@ Credentials are read from environment variables:
 					"P1": "High",
 					"P2": "Medium",
 				},
-			})
+			}).WithAudit(recorder)
 
 			// Optional Claude extractor: enabled iff ANTHROPIC_API_KEY is set.
 			if claudeKey := os.Getenv("ANTHROPIC_API_KEY"); claudeKey != "" {

@@ -15,8 +15,10 @@ import (
 	gh "github.com/45online/roster/internal/adapters/github"
 	"github.com/45online/roster/internal/adapters/jira"
 	"github.com/45online/roster/internal/api"
+	"github.com/45online/roster/internal/audit"
 	"github.com/45online/roster/internal/modules/issue_to_jira"
 	"github.com/45online/roster/internal/poller"
+	"github.com/45online/roster/internal/projcfg"
 )
 
 // newTakeoverCmd builds `roster takeover`: foreground-running poller
@@ -26,8 +28,8 @@ import (
 // be plugged into the same handler in later phases.
 func newTakeoverCmd() *cobra.Command {
 	var (
-		repo, jiraProject, jiraURL, jiraEmail string
-		interval                              time.Duration
+		repo, jiraProject, jiraURL, jiraEmail, configPath string
+		interval                                          time.Duration
 	)
 	cmd := &cobra.Command{
 		Use:   "takeover",
@@ -70,18 +72,41 @@ Credentials (env vars):
 				return fmt.Errorf("--jira-email or ROSTER_JIRA_EMAIL is required")
 			}
 
+			// Project config (optional). Flags override config values.
+			cfgFile := configPath
+			if cfgFile == "" {
+				cfgFile = ".roster/config.yml"
+			}
+			cfg, found, err := projcfg.LoadOrDefault(cfgFile)
+			if err != nil {
+				return fmt.Errorf("load config: %w", err)
+			}
+			if found {
+				fmt.Printf("✓ Loaded config from %s\n", cfgFile)
+			}
+			if repo == "" {
+				return fmt.Errorf("--repo is required")
+			}
+			if jiraProject == "" {
+				jiraProject = cfg.Modules.IssueToJira.JiraProject
+			}
+			if jiraProject == "" {
+				return fmt.Errorf("jira project is required (pass --jira-project or set modules.issue_to_jira.jira_project)")
+			}
+
 			ghClient := gh.NewClient(ghToken)
 			jiraClient := jira.NewClient(jiraURL, jiraEmail, jiraToken)
+			recorder := audit.NewRecorder(audit.DefaultBaseDir())
 			modA := issue_to_jira.New(ghClient, jiraClient, issue_to_jira.Config{
 				JiraProject:      jiraProject,
-				DefaultIssueType: "Task",
-				LabelToIssueType: map[string]string{"bug": "Bug"},
-				PriorityMapping: map[string]string{
+				DefaultIssueType: orDefault(cfg.Modules.IssueToJira.DefaultIssueType, "Task"),
+				LabelToIssueType: orMap(cfg.Modules.IssueToJira.LabelToIssueType, map[string]string{"bug": "Bug"}),
+				PriorityMapping: orMap(cfg.Modules.IssueToJira.PriorityMapping, map[string]string{
 					"P0": "Highest",
 					"P1": "High",
 					"P2": "Medium",
-				},
-			})
+				}),
+			}).WithAudit(recorder)
 
 			// Optional Claude extractor: enabled iff ANTHROPIC_API_KEY is set.
 			if claudeKey := os.Getenv("ANTHROPIC_API_KEY"); claudeKey != "" {
@@ -153,13 +178,29 @@ Credentials (env vars):
 		},
 	}
 	cmd.Flags().StringVar(&repo, "repo", "", "GitHub repo (owner/name) — required")
-	cmd.Flags().StringVar(&jiraProject, "jira-project", "", "Jira project key — required")
+	cmd.Flags().StringVar(&jiraProject, "jira-project", "", "Jira project key (or read from .roster/config.yml)")
 	cmd.Flags().StringVar(&jiraURL, "jira-url", "", "Jira site URL (or set ROSTER_JIRA_URL)")
 	cmd.Flags().StringVar(&jiraEmail, "jira-email", "", "Jira account email (or set ROSTER_JIRA_EMAIL)")
+	cmd.Flags().StringVar(&configPath, "config", "", "Path to project config (default: .roster/config.yml)")
 	cmd.Flags().DurationVar(&interval, "interval", 30*time.Second, "Poll cadence")
 	_ = cmd.MarkFlagRequired("repo")
-	_ = cmd.MarkFlagRequired("jira-project")
 	return cmd
+}
+
+// orDefault returns s when non-empty, else def.
+func orDefault(s, def string) string {
+	if s == "" {
+		return def
+	}
+	return s
+}
+
+// orMap returns m when non-empty, else def.
+func orMap(m, def map[string]string) map[string]string {
+	if len(m) > 0 {
+		return m
+	}
+	return def
 }
 
 // signalContext returns a Context that's cancelled on SIGINT or SIGTERM.

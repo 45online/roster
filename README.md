@@ -25,7 +25,8 @@ GitHub  ←→  Roster (AI 员工)  ←→  Jira / Confluence / Slack
 | 2. Module A: Issue → Jira(手动一次性 `sync-issue`) | ✅ 已完成 |
 | 2.x. Poller + 防循环 + `takeover` 自动触发 | ✅ 已完成 |
 | 2.y. Claude API 接入(智能字段抽取) | ✅ 已完成 |
-| 2.z. SQLite 审计日志 + `.roster/config.yml` + `roster login` | ⏳ 下一步 |
+| 2.z₁. JSONL 审计日志 + `.roster/config.yml` + `roster init` | ✅ 已完成 |
+| 2.z₂. `roster login` 凭证管理 | ⏳ 下一步 |
 | 3. Module B: PR AI Review | ⏳ |
 | 4. Module C: Issue close → Confluence | ⏳ |
 | 5. Module D: 告警聚合 → Slack | ⏳ |
@@ -92,14 +93,21 @@ export ROSTER_JIRA_TOKEN=xxxx                         # Jira API token
 ```
 
 **B. 后台 daemon(自动监听 issues.opened)**
+
+推荐先 `roster init` 在仓库内生成项目配置:
 ```bash
-./bin/roster takeover --repo owner/name --jira-project ABC --interval 30s
-# → ✓ Authenticated as @virtual-employee (anti-loop filter armed)
+cd <your-repo>
+roster init                          # 生成 .roster/config.yml(改 jira_project)
+roster takeover --repo owner/name    # 自动从 .roster/config.yml 读 jira_project / mappings
+# → ✓ Loaded config from .roster/config.yml
+#   ✓ Authenticated as @virtual-employee (anti-loop filter armed)
 #   [poller] owner/name: starting (interval=30s, ...)
 #   [mod-a] dispatching: owner/name#43 "fix login bug" (by @real-user)
 #   [mod-a] ✓ ABC-124
-# Ctrl+C 停止;cursor 持久化到 ~/.roster/cursors/owner_name.json
+# Ctrl+C 停止
 ```
+
+每次同步都会写一行到 `~/.roster/audit/<owner>_<repo>.jsonl`(JSON-per-line,可 `tail -f`)。Cursor 持久化到 `~/.roster/cursors/<owner>_<repo>.json`,重启不会重处理。
 
 **C. 启用 Claude 智能字段抽取(可选)**
 

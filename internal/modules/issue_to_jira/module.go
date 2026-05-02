@@ -8,9 +8,11 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	gh "github.com/45online/roster/internal/adapters/github"
 	"github.com/45online/roster/internal/adapters/jira"
+	"github.com/45online/roster/internal/audit"
 )
 
 // Config holds Module A's per-project configuration.
@@ -33,7 +35,8 @@ type Module struct {
 	gh        *gh.Client
 	jira      *jira.Client
 	cfg       Config
-	extractor *Extractor // optional Claude-powered field extractor
+	extractor *Extractor      // optional Claude-powered field extractor
+	audit     *audit.Recorder // optional audit recorder
 }
 
 // New constructs a Module. The caller supplies pre-configured adapters.
@@ -47,6 +50,13 @@ func New(github *gh.Client, j *jira.Client, cfg Config) *Module {
 // path on extraction failure.
 func (m *Module) WithExtractor(e *Extractor) *Module {
 	m.extractor = e
+	return m
+}
+
+// WithAudit attaches an audit recorder. Each SyncIssue invocation will
+// append one entry capturing inputs, AI usage, outcome, and duration.
+func (m *Module) WithAudit(r *audit.Recorder) *Module {
+	m.audit = r
 	return m
 }
 
@@ -64,12 +74,28 @@ type Result struct {
 // caller is responsible for filtering events appropriately (e.g. only on
 // issues.opened).
 func (m *Module) SyncIssue(ctx context.Context, repo string, number int) (*Result, error) {
-	issue, err := m.gh.GetIssue(ctx, repo, number)
-	if err != nil {
-		return nil, fmt.Errorf("fetch github issue: %w", err)
+	started := time.Now()
+	entry := audit.Entry{
+		Module: "issue_to_jira",
+		Repo:   repo,
+		Issue:  number,
 	}
 
+	issue, err := m.gh.GetIssue(ctx, repo, number)
+	if err != nil {
+		entry.Status = "error"
+		entry.Error = fmt.Sprintf("fetch github issue: %v", err)
+		entry.DurationMS = time.Since(started).Milliseconds()
+		m.audit.Record(entry)
+		return nil, fmt.Errorf("fetch github issue: %w", err)
+	}
+	entry.Actor = issue.User.Login
+
 	summary, issueType, priority, component, aiUsed := m.deriveFields(ctx, issue)
+	entry.AIExtracted = aiUsed
+	if aiUsed && m.extractor != nil {
+		entry.Model = m.extractor.model
+	}
 
 	createReq := jira.CreateIssueRequest{
 		Project:     m.cfg.JiraProject,
@@ -81,16 +107,29 @@ func (m *Module) SyncIssue(ctx context.Context, repo string, number int) (*Resul
 
 	created, err := m.jira.CreateIssue(ctx, createReq)
 	if err != nil {
+		entry.Status = "error"
+		entry.Error = fmt.Sprintf("create jira issue: %v", err)
+		entry.DurationMS = time.Since(started).Milliseconds()
+		m.audit.Record(entry)
 		return nil, fmt.Errorf("create jira issue: %w", err)
 	}
+	entry.JiraKey = created.Key
+	entry.JiraURL = created.URL
 
 	comment := fmt.Sprintf("📋 Tracking in Jira: **[%s](%s)**", created.Key, created.URL)
 	if err := m.gh.CreateComment(ctx, repo, number, comment); err != nil {
 		// The Jira ticket exists; we report partial success.
+		entry.Status = "partial"
+		entry.Error = fmt.Sprintf("post github back-link comment: %v", err)
+		entry.DurationMS = time.Since(started).Milliseconds()
+		m.audit.Record(entry)
 		return &Result{JiraKey: created.Key, JiraURL: created.URL, AIExtracted: aiUsed},
 			fmt.Errorf("post github back-link comment: %w", err)
 	}
 
+	entry.Status = "success"
+	entry.DurationMS = time.Since(started).Milliseconds()
+	m.audit.Record(entry)
 	return &Result{JiraKey: created.Key, JiraURL: created.URL, AIExtracted: aiUsed}, nil
 }
 
