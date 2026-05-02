@@ -17,6 +17,7 @@ import (
 	"github.com/45online/roster/internal/api"
 	"github.com/45online/roster/internal/audit"
 	"github.com/45online/roster/internal/modules/issue_to_jira"
+	"github.com/45online/roster/internal/modules/pr_review"
 	"github.com/45online/roster/internal/poller"
 	"github.com/45online/roster/internal/projcfg"
 )
@@ -98,15 +99,32 @@ Credentials (env vars):
 				}),
 			}).WithAudit(recorder)
 
-			// Optional Claude extractor: enabled iff a Claude API key is available.
+			// Optional Claude extractor for Module A and Module B.
+			var apiClient api.Client
 			if claudeKey := r.claude(); claudeKey != "" {
-				apiClient, apiErr := api.NewClient(api.ClientConfig{
+				if c, apiErr := api.NewClient(api.ClientConfig{
 					Provider: api.ProviderDirect,
 					APIKey:   claudeKey,
-				}, nil)
-				if apiErr == nil {
+				}, nil); apiErr == nil {
+					apiClient = c
 					modA = modA.WithExtractor(issue_to_jira.NewExtractor(apiClient, ""))
 					fmt.Println("✓ Claude extractor enabled")
+				}
+			}
+
+			// Module B (PR AI Review): enabled by config + Claude availability.
+			var modB *pr_review.Module
+			if cfg.Modules.PRReview.Enabled {
+				if apiClient == nil {
+					fmt.Fprintln(os.Stderr, "⚠ pr_review.enabled=true but no Claude API key — Module B disabled")
+				} else {
+					modB = pr_review.New(ghClient, apiClient, "", pr_review.Config{
+						SkipPaths:         cfg.Modules.PRReview.SkipPaths,
+						MaxDiffBytes:      cfg.Modules.PRReview.MaxDiffBytes,
+						CanApprove:        cfg.Modules.PRReview.CanApprove,
+						CanRequestChanges: cfg.Modules.PRReview.CanRequestChanges,
+					}).WithAudit(recorder)
+					fmt.Println("✓ Module B (PR review) armed")
 				}
 			}
 
@@ -120,32 +138,61 @@ Credentials (env vars):
 			fmt.Printf("✓ Authenticated as @%s (anti-loop filter armed)\n", selfLogin)
 
 			handler := func(ctx context.Context, ev gh.Event) error {
-				if ev.Type != "IssuesEvent" {
-					return nil
-				}
-				p, err := ev.DecodeIssuesPayload()
-				if err != nil {
-					return err
-				}
-				if p.Action != "opened" {
-					return nil
-				}
-				log.Printf("[mod-a] dispatching: %s#%d %q (by @%s)",
-					repo, p.Issue.Number, p.Issue.Title, ev.Actor.Login)
+				switch ev.Type {
+				case "IssuesEvent":
+					p, err := ev.DecodeIssuesPayload()
+					if err != nil {
+						return err
+					}
+					if p.Action != "opened" {
+						return nil
+					}
+					log.Printf("[mod-a] dispatching: %s#%d %q (by @%s)",
+						repo, p.Issue.Number, p.Issue.Title, ev.Actor.Login)
 
-				res, err := modA.SyncIssue(ctx, repo, p.Issue.Number)
-				if err != nil && res == nil {
-					return err
-				}
-				if err != nil {
-					log.Printf("[mod-a] partial: %s created, comment failed: %v", res.JiraKey, err)
+					res, err := modA.SyncIssue(ctx, repo, p.Issue.Number)
+					if err != nil && res == nil {
+						return err
+					}
+					if err != nil {
+						log.Printf("[mod-a] partial: %s created, comment failed: %v", res.JiraKey, err)
+						return nil
+					}
+					marker := ""
+					if res.AIExtracted {
+						marker = " (AI-extracted)"
+					}
+					log.Printf("[mod-a] ✓ %s%s → %s", res.JiraKey, marker, res.JiraURL)
+					return nil
+
+				case "PullRequestEvent":
+					if modB == nil {
+						return nil
+					}
+					p, err := ev.DecodePullRequestPayload()
+					if err != nil {
+						return err
+					}
+					if p.Action != "opened" && p.Action != "synchronize" {
+						return nil
+					}
+					if p.PullRequest.Draft {
+						return nil
+					}
+					log.Printf("[mod-b] dispatching: %s#%d %q (by @%s, action=%s)",
+						repo, p.Number, p.PullRequest.Title, ev.Actor.Login, p.Action)
+
+					res, err := modB.ReviewPR(ctx, repo, p.Number)
+					if err != nil {
+						return err
+					}
+					if res.Skipped {
+						log.Printf("[mod-b] ⏭  skipped: %s", res.SkipReason)
+						return nil
+					}
+					log.Printf("[mod-b] ✓ %s (%d inline comments)", res.Verdict, res.CommentCount)
 					return nil
 				}
-				marker := ""
-				if res.AIExtracted {
-					marker = " (AI-extracted)"
-				}
-				log.Printf("[mod-a] ✓ %s%s → %s", res.JiraKey, marker, res.JiraURL)
 				return nil
 			}
 

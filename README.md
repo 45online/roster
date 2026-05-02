@@ -27,8 +27,8 @@ GitHub  ←→  Roster (AI 员工)  ←→  Jira / Confluence / Slack
 | 2.y. Claude API 接入(智能字段抽取) | ✅ 已完成 |
 | 2.z₁. JSONL 审计日志 + `.roster/config.yml` + `roster init` | ✅ 已完成 |
 | 2.z₂. `roster login` 凭证管理 | ✅ 已完成 |
-| 3. Module B: PR AI Review | ⏳ 下一步 |
-| 4. Module C: Issue close → Confluence | ⏳ |
+| 3. Module B: PR AI Review(`review-pr` + 接入 takeover) | ✅ 已完成 |
+| 4. Module C: Issue close → Confluence | ⏳ 下一步 |
 | 5. Module D: 告警聚合 → Slack | ⏳ |
 
 二进制可编译运行,Module A 已可通过 `roster sync-issue` 手动触发完成
@@ -118,6 +118,33 @@ roster takeover --repo owner/name    # 自动从 .roster/config.yml 读 jira_pro
 ```
 
 每次同步都会写一行到 `~/.roster/audit/<owner>_<repo>.jsonl`(JSON-per-line,可 `tail -f`)。Cursor 持久化到 `~/.roster/cursors/<owner>_<repo>.json`,重启不会重处理。
+
+**D. Module B:PR AI Review**
+
+需要 Claude 凭证(`roster login claude` 或 `ANTHROPIC_API_KEY`)。
+
+手动一次性:
+```bash
+./bin/roster review-pr --repo owner/name --pr 42
+# → ✓ Review submitted (comment, 2 inline comments)
+# 默认所有 verdict 都被降级为 COMMENT(真人才能 Approve / Block)
+# --can-approve / --can-request-changes 解锁
+```
+
+后台 daemon(配 `.roster/config.yml`):
+```yaml
+modules:
+  pr_review:
+    enabled: true
+    skip_paths:               # 全部命中则跳过整个 PR
+      - "docs/"
+      - "*.md"
+    max_diff_bytes: 65536
+    can_approve: false
+    can_request_changes: false
+```
+
+`roster takeover` 会在 PR opened / synchronize 事件触发 review,draft PR 自动跳过。
 
 **C. 启用 Claude 智能字段抽取(可选)**
 

@@ -23,10 +23,10 @@ type Config struct {
 
 // Modules toggles and configures each Roster module.
 type Modules struct {
-	IssueToJira       IssueToJira       `yaml:"issue_to_jira"`
-	PRReview          ModuleToggle      `yaml:"pr_review"`
-	IssueToConfluence ModuleToggle      `yaml:"issue_to_confluence"`
-	AlertAggregation  AlertAggregation  `yaml:"alert_aggregation"`
+	IssueToJira       IssueToJira      `yaml:"issue_to_jira"`
+	PRReview          PRReview         `yaml:"pr_review"`
+	IssueToConfluence ModuleToggle     `yaml:"issue_to_confluence"`
+	AlertAggregation  AlertAggregation `yaml:"alert_aggregation"`
 }
 
 // ModuleToggle is a simple enabled-flag for modules not yet implemented.
@@ -41,6 +41,22 @@ type IssueToJira struct {
 	DefaultIssueType string            `yaml:"default_issue_type"`
 	PriorityMapping  map[string]string `yaml:"priority_mapping"`
 	LabelToIssueType map[string]string `yaml:"label_to_issue_type"`
+}
+
+// PRReview configures Module B.
+type PRReview struct {
+	Enabled bool `yaml:"enabled"`
+	// SkipPaths short-circuits the review if every changed file matches.
+	// Forms: "docs/", "docs/**", "*.md".
+	SkipPaths []string `yaml:"skip_paths"`
+	// MaxDiffBytes truncates large diffs before sending to Claude.
+	// 0 → use module default (64 KB).
+	MaxDiffBytes int `yaml:"max_diff_bytes"`
+	// CanApprove gates the APPROVE verdict. false (default) → submitted
+	// as plain COMMENT, real approval still requires a human.
+	CanApprove bool `yaml:"can_approve"`
+	// CanRequestChanges gates REQUEST_CHANGES (a blocking review).
+	CanRequestChanges bool `yaml:"can_request_changes"`
 }
 
 // AlertAggregation configures Module D.

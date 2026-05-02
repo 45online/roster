@@ -21,9 +21,18 @@ modules:
     label_to_issue_type:     # override Jira issue type by GH label
       bug: Bug
 
-  # Module B — AI review of pull requests. (not yet implemented)
+  # Module B — AI review of pull requests.
   pr_review:
     enabled: false
+    skip_paths:               # if every changed file matches, skip the review
+      - "docs/"
+      - "*.md"
+      - "vendor/"
+    max_diff_bytes: 65536     # 64 KB; larger diffs are truncated
+    # Safety gates (default false): when off, even an "approve" verdict is
+    # submitted as a plain COMMENT — a human still has to click the button.
+    can_approve: false
+    can_request_changes: false
 
   # Module C — archive closed Issue threads to Confluence as drafts. (not yet)
   issue_to_confluence:
