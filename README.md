@@ -21,13 +21,15 @@ GitHub  ←→  Roster (AI 员工)  ←→  Jira / Confluence / Slack
 | 阶段 | 状态 |
 |---|---|
 | 0. Fork claude-code-go 改名 + 业务目录 | ✅ 已完成 |
-| 1. CLI 文案 + 凭证管理 | ⏳ 进行中 |
-| 2. Module A: Issue → Jira | ⏳ |
+| 1. CLI 文案 + 启动 logo | ✅ 已完成 |
+| 2. Module A: Issue → Jira(手动一次性) | ✅ 已完成 |
+| 2.x. Poller + 自动触发 | ⏳ 下一步 |
 | 3. Module B: PR AI Review | ⏳ |
 | 4. Module C: Issue close → Confluence | ⏳ |
 | 5. Module D: 告警聚合 → Slack | ⏳ |
 
-二进制目前可编译运行,但业务模块尚未实现。
+二进制可编译运行,Module A 已可通过 `roster sync-issue` 手动触发完成
+GitHub Issue → Jira 的端到端同步。后台 poller 与其他模块尚未实现。
 
 ---
 
@@ -71,7 +73,23 @@ make build
 ./bin/roster --help
 ```
 
-### 计划中的使用流程
+### 试用 Module A(已可用)
+
+最小验证:把一个 GitHub issue 同步到 Jira,看完整链路是否能跑通。
+
+```bash
+export ROSTER_GITHUB_TOKEN=ghp_xxx                    # GitHub PAT(虚拟员工账户)
+export ROSTER_JIRA_URL=https://yourorg.atlassian.net  # Jira 站点
+export ROSTER_JIRA_EMAIL=you@example.com              # Jira 账户邮箱
+export ROSTER_JIRA_TOKEN=xxxx                         # Jira API token
+
+./bin/roster sync-issue --repo owner/name --issue 42 --jira-project ABC
+# → ✓ Created ABC-123
+#   https://yourorg.atlassian.net/browse/ABC-123
+# 同时在 GitHub issue #42 留下评论:📋 Tracking in Jira: **ABC-123**
+```
+
+### 计划中的使用流程(daemon 模式,尚未实现)
 ```bash
 # 一次性凭证
 roster login github          # 粘贴 PAT
