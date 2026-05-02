@@ -29,7 +29,8 @@ GitHub  ←→  Roster (AI 员工)  ←→  Jira / Confluence / Slack
 | 2.z₂. `roster login` 凭证管理 | ✅ 已完成 |
 | 3. Module B: PR AI Review(`review-pr` + 接入 takeover) | ✅ 已完成 |
 | 4. Module C: Issue close → Confluence(`archive-issue` + 接入 takeover) | ✅ 已完成 |
-| 5. Module D: 告警聚合 → Slack | ⏳ 下一步 |
+| 5. Module D: 告警聚合 → Slack(`aggregate-alert`,无 AI 纯模板) | ✅ 已完成 |
+| 6. 打磨(webhook 模式 / `roster status` / Budget 告警) | ⏳ 下一步 |
 
 二进制可编译运行,Module A 已可通过 `roster sync-issue` 手动触发完成
 GitHub Issue → Jira 的端到端同步。后台 poller 与其他模块尚未实现。
@@ -172,6 +173,42 @@ modules:
 ```
 
 `roster takeover` 会在 issue closed 事件触发归档。如果没有 `completed` label,会被 skip,审计里有记录但不创建草稿。
+
+**F. Module D:告警聚合 → Slack**
+
+需要 GitHub PAT(只读够用)+ `roster login slack`。**不需要 Claude**(纯模板化,零成本)。
+
+由外部告警系统(CloudWatch / Datadog / PagerDuty)调用:
+```bash
+roster aggregate-alert \
+  --repo owner/name \
+  --slack-channel "#oncall" \
+  --source CloudWatch \
+  --severity critical \
+  --title "5xx error rate at 8.2%" \
+  --body "Threshold 2%, sustained 5min" \
+  --lookback 1h \
+  --link "Logs=https://..." \
+  --link "Runbook=https://wiki/runbook"
+```
+
+输出到 `#oncall` 的消息是这样:
+
+```
+🚨 [CloudWatch] 5xx error rate at 8.2%
+> Threshold 2%, sustained 5min
+_Time: 2026-05-03T14:23:00Z_
+_Repo: <https://github.com/owner/name|owner/name>_
+
+📋 *Recent activity:*
+• `a3f9c1d` <…|commit> by @alice — "fix: rate limiter"  _12m ago_
+• <…|PR #234> merged by @bob — "auth refactor"  _28m ago_
+• `b2e4d5a` <…|commit> by @carol — "config: bump db pool"  _45m ago_
+
+🔗 <https://...|Logs>  ·  <https://wiki/runbook|Runbook>
+```
+
+**设计哲学**:Module D 是"日志看板"角色 —— 列举近期活动让 oncall 自己判断,不归因、不 at 人、不建票。错误归因比没有归因更糟。
 
 **C. 启用 Claude 智能字段抽取(可选)**
 
