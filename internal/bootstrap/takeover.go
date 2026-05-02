@@ -51,26 +51,16 @@ Credentials (env vars):
   ROSTER_GITHUB_TOKEN, ROSTER_JIRA_TOKEN, ROSTER_JIRA_URL, ROSTER_JIRA_EMAIL
 `),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ghToken := os.Getenv("ROSTER_GITHUB_TOKEN")
-			if ghToken == "" {
-				return fmt.Errorf("ROSTER_GITHUB_TOKEN is not set")
+			r := &credsResolver{}
+			ghToken, err := r.gh()
+			if err != nil {
+				return err
 			}
-			jiraToken := os.Getenv("ROSTER_JIRA_TOKEN")
-			if jiraToken == "" {
-				return fmt.Errorf("ROSTER_JIRA_TOKEN is not set")
+			resolvedURL, resolvedEmail, jiraToken, err := r.jira(jiraURL, jiraEmail)
+			if err != nil {
+				return err
 			}
-			if jiraURL == "" {
-				jiraURL = os.Getenv("ROSTER_JIRA_URL")
-			}
-			if jiraURL == "" {
-				return fmt.Errorf("--jira-url or ROSTER_JIRA_URL is required")
-			}
-			if jiraEmail == "" {
-				jiraEmail = os.Getenv("ROSTER_JIRA_EMAIL")
-			}
-			if jiraEmail == "" {
-				return fmt.Errorf("--jira-email or ROSTER_JIRA_EMAIL is required")
-			}
+			jiraURL, jiraEmail = resolvedURL, resolvedEmail
 
 			// Project config (optional). Flags override config values.
 			cfgFile := configPath
@@ -108,8 +98,8 @@ Credentials (env vars):
 				}),
 			}).WithAudit(recorder)
 
-			// Optional Claude extractor: enabled iff ANTHROPIC_API_KEY is set.
-			if claudeKey := os.Getenv("ANTHROPIC_API_KEY"); claudeKey != "" {
+			// Optional Claude extractor: enabled iff a Claude API key is available.
+			if claudeKey := r.claude(); claudeKey != "" {
 				apiClient, apiErr := api.NewClient(api.ClientConfig{
 					Provider: api.ProviderDirect,
 					APIKey:   claudeKey,

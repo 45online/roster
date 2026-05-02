@@ -39,26 +39,16 @@ Credentials are read from environment variables:
   ROSTER_JIRA_EMAIL     Jira account email — or pass --jira-email
 `),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ghToken := os.Getenv("ROSTER_GITHUB_TOKEN")
-			if ghToken == "" {
-				return fmt.Errorf("ROSTER_GITHUB_TOKEN is not set")
+			r := &credsResolver{}
+			ghToken, err := r.gh()
+			if err != nil {
+				return err
 			}
-			jiraToken := os.Getenv("ROSTER_JIRA_TOKEN")
-			if jiraToken == "" {
-				return fmt.Errorf("ROSTER_JIRA_TOKEN is not set")
+			resolvedURL, resolvedEmail, jiraToken, err := r.jira(jiraURL, jiraEmail)
+			if err != nil {
+				return err
 			}
-			if jiraURL == "" {
-				jiraURL = os.Getenv("ROSTER_JIRA_URL")
-			}
-			if jiraURL == "" {
-				return fmt.Errorf("--jira-url or ROSTER_JIRA_URL is required")
-			}
-			if jiraEmail == "" {
-				jiraEmail = os.Getenv("ROSTER_JIRA_EMAIL")
-			}
-			if jiraEmail == "" {
-				return fmt.Errorf("--jira-email or ROSTER_JIRA_EMAIL is required")
-			}
+			jiraURL, jiraEmail = resolvedURL, resolvedEmail
 
 			ghClient := gh.NewClient(ghToken)
 			jiraClient := jira.NewClient(jiraURL, jiraEmail, jiraToken)
@@ -74,8 +64,8 @@ Credentials are read from environment variables:
 				},
 			}).WithAudit(recorder)
 
-			// Optional Claude extractor: enabled iff ANTHROPIC_API_KEY is set.
-			if claudeKey := os.Getenv("ANTHROPIC_API_KEY"); claudeKey != "" {
+			// Optional Claude extractor: enabled iff a Claude API key is available.
+			if claudeKey := r.claude(); claudeKey != "" {
 				apiClient, apiErr := api.NewClient(api.ClientConfig{
 					Provider: api.ProviderDirect,
 					APIKey:   claudeKey,

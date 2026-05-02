@@ -26,8 +26,8 @@ GitHub  ←→  Roster (AI 员工)  ←→  Jira / Confluence / Slack
 | 2.x. Poller + 防循环 + `takeover` 自动触发 | ✅ 已完成 |
 | 2.y. Claude API 接入(智能字段抽取) | ✅ 已完成 |
 | 2.z₁. JSONL 审计日志 + `.roster/config.yml` + `roster init` | ✅ 已完成 |
-| 2.z₂. `roster login` 凭证管理 | ⏳ 下一步 |
-| 3. Module B: PR AI Review | ⏳ |
+| 2.z₂. `roster login` 凭证管理 | ✅ 已完成 |
+| 3. Module B: PR AI Review | ⏳ 下一步 |
 | 4. Module C: Issue close → Confluence | ⏳ |
 | 5. Module D: 告警聚合 → Slack | ⏳ |
 
@@ -78,11 +78,21 @@ make build
 
 ### 试用 Module A(已可用)
 
+凭证两种方式任选其一(env vars 优先,文件 fallback):
+
 ```bash
-export ROSTER_GITHUB_TOKEN=ghp_xxx                    # GitHub PAT(虚拟员工账户)
-export ROSTER_JIRA_URL=https://yourorg.atlassian.net  # Jira 站点
-export ROSTER_JIRA_EMAIL=you@example.com              # Jira 账户邮箱
-export ROSTER_JIRA_TOKEN=xxxx                         # Jira API token
+# 方式 A:一次性 login(推荐)
+roster login github          # 提示输入 PAT,保存到 ~/.roster/credentials.json (0600)
+roster login jira            # URL / email / token
+roster login claude          # 可选,启用 AI 字段抽取
+roster login status          # 看哪些已配置
+
+# 方式 B:环境变量(临时 / CI 友好)
+export ROSTER_GITHUB_TOKEN=ghp_xxx
+export ROSTER_JIRA_URL=https://yourorg.atlassian.net
+export ROSTER_JIRA_EMAIL=you@example.com
+export ROSTER_JIRA_TOKEN=xxxx
+export ANTHROPIC_API_KEY=sk-ant-xxx       # 可选
 ```
 
 **A. 一次性手动同步**
