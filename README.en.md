@@ -22,7 +22,7 @@ GitHub  ←→  Roster (AI employee)  ←→  Jira / Confluence / Slack
 
 ## Status
 
-**Released: [v0.2.0](https://github.com/45online/roster/releases/tag/v0.2.0)** — every phase the design doc planned is implemented: four end-to-end modules, two-mode budget threshold, undercover identity isolation, polling + webhook event sources, cross-platform binaries + multi-arch Docker, **multi-LLM provider** (Claude / DeepSeek / Gemini / OpenAI / xAI / any OpenAI-compatible endpoint).
+**Released: [v0.2.1](https://github.com/45online/roster/releases/tag/v0.2.1)** — every phase the design doc planned is implemented: four end-to-end modules, two-mode budget threshold, undercover identity isolation, polling + webhook event sources, cross-platform binaries + multi-arch Docker, **multi-LLM provider** (Claude / DeepSeek / Gemini / OpenAI / xAI / any OpenAI-compatible endpoint).
 
 **Next chapter: dogfood.** Feature-filling stops here. The next week is
 about running Roster against a real repo and watching what assumptions
@@ -95,9 +95,9 @@ make build
 
 **B. Docker** (zero deps)
 ```bash
-docker pull ghcr.io/45online/roster:v0.2.0   # or :latest
-docker run --rm ghcr.io/45online/roster:v0.2.0 --version
-# → roster v0.2.0
+docker pull ghcr.io/45online/roster:v0.2.1   # or :latest
+docker run --rm ghcr.io/45online/roster:v0.2.1 --version
+# → roster v0.2.1
 ```
 
 Full run (mount `~/.roster` for persistent creds + audit + cursor;
@@ -107,7 +107,7 @@ docker run --rm \
   -v "$HOME/.roster:/home/roster/.roster" \
   -v "$PWD:/work" -w /work \
   -e ROSTER_GITHUB_TOKEN -e ROSTER_JIRA_TOKEN -e ROSTER_JIRA_URL -e ROSTER_JIRA_EMAIL -e ROSTER_LLM_API_KEY \
-  ghcr.io/45online/roster:v0.2.0 takeover --repo owner/name
+  ghcr.io/45online/roster:v0.2.1 takeover --repo owner/name
 ```
 
 Multi-arch (linux/amd64, linux/arm64), final image ~40 MB.
