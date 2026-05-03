@@ -16,27 +16,27 @@ GitHub  ←→  Roster (AI 员工)  ←→  Jira / Confluence / Slack
 
 ## 状态
 
-🚧 **早期开发(Pre-alpha)**
+**已发布:[v0.1.2](https://github.com/45online/roster/releases/tag/v0.1.2)** —— 4 个业务模块全部端到端可用,有 budget 跟踪 + 阈值告警,有跨平台二进制 + 多架构 docker 镜像。还在 alpha 阶段,等待真实场景的反馈。
 
 | 阶段 | 状态 |
 |---|---|
-| 0. Fork claude-code-go 改名 + 业务目录 | ✅ 已完成 |
-| 1. CLI 文案 + 启动 logo | ✅ 已完成 |
-| 2. Module A: Issue → Jira(手动一次性 `sync-issue`) | ✅ 已完成 |
-| 2.x. Poller + 防循环 + `takeover` 自动触发 | ✅ 已完成 |
-| 2.y. Claude API 接入(智能字段抽取) | ✅ 已完成 |
-| 2.z₁. JSONL 审计日志 + `.roster/config.yml` + `roster init` | ✅ 已完成 |
-| 2.z₂. `roster login` 凭证管理 | ✅ 已完成 |
-| 3. Module B: PR AI Review(`review-pr` + 接入 takeover) | ✅ 已完成 |
-| 4. Module C: Issue close → Confluence(`archive-issue` + 接入 takeover) | ✅ 已完成 |
-| 5. Module D: 告警聚合 → Slack(`aggregate-alert`,无 AI 纯模板) | ✅ 已完成 |
-| 6.a `roster status` + `roster logs` 观察面板 | ✅ 已完成 |
-| 6.b Budget 跟踪(token + cost,按月汇总) | ✅ 已完成 |
-| 8. 容器化 + CI(Dockerfile + GitHub Actions) | ✅ 已完成 |
-| 6.c Webhook 模式 + Budget 阈值告警 | ⏳ 下一步 |
-
-二进制可编译运行,Module A 已可通过 `roster sync-issue` 手动触发完成
-GitHub Issue → Jira 的端到端同步。后台 poller 与其他模块尚未实现。
+| 0. Fork claude-code-go 改名 + 业务目录 | ✅ |
+| 1. CLI 文案 + 启动 logo | ✅ |
+| 2. Module A: Issue → Jira(`sync-issue`) | ✅ |
+| 2.x. Poller + 防循环 + `takeover` | ✅ |
+| 2.y. Claude API 智能字段抽取 | ✅ |
+| 2.z₁. JSONL 审计 + `.roster/config.yml` + `roster init` | ✅ |
+| 2.z₂. `roster login` 凭证管理 | ✅ |
+| 3. Module B: PR AI Review(`review-pr` + takeover) | ✅ |
+| 4. Module C: Issue close → Confluence(`archive-issue` + takeover) | ✅ |
+| 5. Module D: 告警聚合 → Slack(`aggregate-alert`,纯模板无 AI) | ✅ |
+| 6.a `roster status` + `roster logs` 观察面板 | ✅ |
+| 6.b Budget 跟踪(token + USD,月度汇总) | ✅ |
+| 6.c Budget 阈值 stop 模式 | ✅ |
+| 8. 容器化 + CI(Dockerfile + Actions + GHCR) | ✅ |
+| 6.c.next Budget downgrade 模式 | ⏳ |
+| 6.d Webhook 模式 + GitHub HMAC 校验 | ⏳ |
+| 7. Undercover Mode(身份隔离) | ⏳ |
 
 ---
 
@@ -84,9 +84,9 @@ make build
 **B. Docker**(零依赖)
 
 ```bash
-docker pull ghcr.io/45online/roster:v0.1.0   # 或 :latest
-docker run --rm ghcr.io/45online/roster:v0.1.0 --version
-# → roster 0.1.0
+docker pull ghcr.io/45online/roster:v0.1.2   # 或 :latest
+docker run --rm ghcr.io/45online/roster:v0.1.2 --version
+# → roster v0.1.2
 ```
 
 完整运行(挂载 `~/.roster` 持久化凭证 + 审计 + cursor;`-w /work` 让命令在挂载的 repo 中执行):
@@ -96,7 +96,7 @@ docker run --rm \
   -v "$HOME/.roster:/home/roster/.roster" \
   -v "$PWD:/work" -w /work \
   -e ROSTER_GITHUB_TOKEN -e ROSTER_JIRA_TOKEN -e ROSTER_JIRA_URL -e ROSTER_JIRA_EMAIL -e ANTHROPIC_API_KEY \
-  ghcr.io/45online/roster:v0.1.0 takeover --repo owner/name
+  ghcr.io/45online/roster:v0.1.2 takeover --repo owner/name
 ```
 
 支持 linux/amd64 和 linux/arm64,镜像 ~40 MB。
