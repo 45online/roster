@@ -41,6 +41,9 @@ archives:
     files:
       - README.md
       - README.en.md
+      - README.ja.md
+      - README.ko.md
+      - README.es.md
       - CHANGELOG.md
       - LICENSE
       - LICENSE.upstream

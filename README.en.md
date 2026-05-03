@@ -1,6 +1,6 @@
 # Roster
 
-**English** · [中文](README.md)
+[中文](README.md) · **English** · [日本語](README.ja.md) · [한국어](README.ko.md) · [Español](README.es.md)
 
 > Add an AI employee to your team.
 

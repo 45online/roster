@@ -1,6 +1,6 @@
 # Roster
 
-[English](README.en.md) · **中文**
+**中文** · [English](README.en.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Español](README.es.md)
 
 > 给团队加一个 AI 员工。
 
