@@ -41,6 +41,9 @@ GitHub  ←→  Roster (AI 员工)  ←→  Jira / Confluence / Slack
 | 7. Undercover Mode(身份隔离 + 秘密 redact) | ✅ |
 | 6.c+ Budget downgrade 模式(关 AI 不停 daemon) | ✅ |
 | 6.d Webhook 模式 + GitHub HMAC 校验 | ✅ |
+| 9. 多 LLM provider(Anthropic / OpenAI-compatible) | ✅ v0.2.0 |
+| 10. Helm chart(K8s 部署) | ✅ v0.2.1 |
+| 11. Slack slash command(`/roster …`) | ✅ v0.2.1 |
 
 ---
 

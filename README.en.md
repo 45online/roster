@@ -48,7 +48,9 @@ history: [CHANGELOG.md](CHANGELOG.md).
 | 6.d Webhook mode + GitHub HMAC verification | ✅ |
 | 7. Undercover Mode (identity isolation + secret redaction) | ✅ |
 | 8. Containerise + CI (Dockerfile + Actions + GHCR) | ✅ |
-| 9. Multi-LLM provider (Anthropic / OpenAI-compatible) | ✅ |
+| 9. Multi-LLM provider (Anthropic / OpenAI-compatible) | ✅ v0.2.0 |
+| 10. Helm chart (Kubernetes deployment) | ✅ v0.2.1 |
+| 11. Slack slash command (`/roster …`) | ✅ v0.2.1 |
 
 ---
 
