@@ -1,0 +1,31 @@
+# Local references and build artifacts — large, not needed in the image.
+.references/
+bin/
+dist/
+coverage.out
+coverage.html
+
+# Editor / OS / VCS metadata.
+.git/
+.github/
+.idea/
+.vscode/
+.DS_Store
+
+# Runtime state that may exist in dev workspaces.
+.roster/
+*.db
+*.sqlite
+*.sqlite-journal
+*.test
+*.out
+
+# Docs that don't affect the build.
+docs/
+README.md
+README.*.md
+CHANGELOG.md
+CODE_OF_CONDUCT.md
+SECURITY.md
+NOTICE
+LICENSE.upstream
