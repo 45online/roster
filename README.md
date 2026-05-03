@@ -35,7 +35,7 @@ GitHub  ←→  Roster (AI 员工)  ←→  Jira / Confluence / Slack
 | 6.c Budget 阈值 stop 模式 | ✅ |
 | 8. 容器化 + CI(Dockerfile + Actions + GHCR) | ✅ |
 | 7. Undercover Mode(身份隔离 + 秘密 redact) | ✅ |
-| 6.c.next Budget downgrade 模式 | ⏳ |
+| 6.c+ Budget downgrade 模式(关 AI 不停 daemon) | ✅ |
 | 6.d Webhook 模式 + GitHub HMAC 校验 | ⏳ |
 
 ---
@@ -296,7 +296,13 @@ Projects (1, last 24h):
 2. **每次事件分发前** 检查当月累计成本(30 秒 TTL 缓存,免每次重读 audit)
 3. **超限时** 按 `on_exceed` 处理:
    - `stop`(默认):打印 `⛔ budget exceeded` 然后退出 daemon
-   - `downgrade`(预留,目前等同 `stop`):未来支持关 AI 走 fallback
+   - `downgrade`:**保持 daemon 运行,但禁用所有 AI 调用** ——
+     - Module A:跳过 Claude 字段抽取,走 label 机械映射(仍能建 Jira 票)
+     - Module B(PR review):整个 skip
+     - Module C(Issue 归档):整个 skip
+     - Module D(告警聚合):**不受影响**(本来就不调 AI)
+
+   downgrade 状态会随每次 budget check 自动恢复 —— 例如月份滚动后 MTD 归零,模块自动恢复。
 
 读 audit 失败时**fail open**(不阻塞业务),避免成为新的故障点。
 

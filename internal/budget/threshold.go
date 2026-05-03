@@ -28,10 +28,11 @@ type Threshold struct {
 
 // Decision is what Threshold.Check returns.
 type Decision struct {
-	MTDUSD     float64 // current month-to-date spend
-	Limit      float64 // configured cap (0 → unlimited)
-	Exceeded   bool    // MTDUSD >= Limit, and Limit > 0
-	ShouldStop bool    // Exceeded && OnExceed == "stop"
+	MTDUSD          float64 // current month-to-date spend
+	Limit           float64 // configured cap (0 → unlimited)
+	Exceeded        bool    // MTDUSD >= Limit, and Limit > 0
+	ShouldStop      bool    // Exceeded && OnExceed == "stop" (or empty → defaults to stop)
+	ShouldDowngrade bool    // Exceeded && OnExceed == "downgrade"
 }
 
 // NewThreshold returns a checker that consults the recorder for the given
@@ -65,9 +66,15 @@ func (t *Threshold) Check(now time.Time) Decision {
 	d := Decision{MTDUSD: cost, Limit: t.MonthlyUSD}
 	if cost >= t.MonthlyUSD {
 		d.Exceeded = true
-		// Default behaviour when on_exceed is unset: stop. We err on the
-		// side of preventing runaway spend.
-		if t.OnExceed == "" || t.OnExceed == "stop" {
+		switch t.OnExceed {
+		case "downgrade":
+			d.ShouldDowngrade = true
+		case "stop", "":
+			// Default when on_exceed is unset: stop. Err on the side of
+			// preventing runaway spend rather than silently degrading.
+			d.ShouldStop = true
+		default:
+			// Unknown mode → fall back to stop, same reasoning.
 			d.ShouldStop = true
 		}
 	}

@@ -40,6 +40,11 @@ type Module struct {
 	cfg       Config
 	extractor *Extractor      // optional Claude-powered field extractor
 	audit     *audit.Recorder // optional audit recorder
+	// aiGuard is optional. When non-nil and returns false, the module
+	// pretends the extractor isn't configured (mechanical mapping
+	// fallback). Used by the budget downgrade path to keep emitting
+	// Jira tickets without spending Claude tokens.
+	aiGuard func() bool
 }
 
 // New constructs a Module. The caller supplies pre-configured adapters.
@@ -60,6 +65,15 @@ func (m *Module) WithExtractor(e *Extractor) *Module {
 // append one entry capturing inputs, AI usage, outcome, and duration.
 func (m *Module) WithAudit(r *audit.Recorder) *Module {
 	m.audit = r
+	return m
+}
+
+// WithAIGuard installs a callback consulted on every SyncIssue. When the
+// callback returns false, the extractor is bypassed and the module falls
+// back to label-based mechanical mapping for that invocation. Used by
+// the budget downgrade path.
+func (m *Module) WithAIGuard(fn func() bool) *Module {
+	m.aiGuard = fn
 	return m
 }
 
@@ -147,7 +161,7 @@ func (m *Module) SyncIssue(ctx context.Context, repo string, number int) (*Resul
 func (m *Module) deriveFields(ctx context.Context, issue *gh.Issue) (
 	summary, issueType, priority, component string, aiUsed bool, usage api.Usage,
 ) {
-	if m.extractor != nil {
+	if m.extractor != nil && (m.aiGuard == nil || m.aiGuard()) {
 		if f, u, err := m.extractor.Extract(ctx, issue); err == nil && f != nil {
 			summary = strings.TrimSpace(f.Summary)
 			issueType = f.IssueType

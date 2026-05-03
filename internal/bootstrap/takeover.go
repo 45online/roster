@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -172,9 +173,15 @@ Credentials (env vars):
 			}
 			fmt.Printf("✓ Authenticated as @%s (anti-loop filter armed)\n", selfLogin)
 
-			// Budget threshold (optional): refuses to start if already over,
-			// stops the daemon at first event after the cap is breached.
-			var threshold *budget.Threshold
+			// Budget threshold (optional): refuses to start if already
+			// over (when on_exceed=stop). When on_exceed=downgrade,
+			// flips a flag that suppresses AI-spending paths but keeps
+			// the daemon running.
+			var (
+				threshold  *budget.Threshold
+				aiAllowed  atomic.Bool
+			)
+			aiAllowed.Store(true) // start permissive
 			if cfg.Budget.MonthlyUSD > 0 {
 				threshold = budget.NewThreshold(recorder, repo, cfg.Budget.MonthlyUSD, cfg.Budget.OnExceed)
 				d := threshold.Check(time.Now().UTC())
@@ -184,12 +191,23 @@ Credentials (env vars):
 					return fmt.Errorf("budget already exceeded ($%.2f / $%.2f); refusing to start (set on_exceed=downgrade or raise the cap)",
 						d.MTDUSD, d.Limit)
 				}
+				if d.ShouldDowngrade {
+					aiAllowed.Store(false)
+					fmt.Println("⚠ already past cap; starting in downgraded mode (no AI calls)")
+				}
+				// Module A: skip the extractor when downgraded; mechanical
+				// label mapping still produces a Jira ticket.
+				modA = modA.WithAIGuard(func() bool { return aiAllowed.Load() })
 			}
 
 			handler := func(ctx context.Context, ev gh.Event) error {
-				// Budget gate — runs before every dispatch. When the cap
-				// is breached and on_exceed=stop, cancel the daemon ctx
-				// so the poller's main loop exits cleanly on the next tick.
+				// Budget gate — runs before every dispatch.
+				//   on_exceed=stop      → cancel daemon ctx; poller exits.
+				//   on_exceed=downgrade → flip aiAllowed off; modules
+				//                         requiring AI are skipped this
+				//                         tick, modA falls back to
+				//                         mechanical mapping.
+				downgraded := false
 				if threshold != nil {
 					d := threshold.Check(time.Now().UTC())
 					if d.ShouldStop {
@@ -197,6 +215,18 @@ Credentials (env vars):
 							d.MTDUSD, d.Limit)
 						cancel()
 						return fmt.Errorf("budget exceeded")
+					}
+					if d.ShouldDowngrade {
+						if aiAllowed.Swap(false) {
+							log.Printf("⚠ budget exceeded: MTD $%.2f / cap $%.2f — downgrading (no AI calls until next month)",
+								d.MTDUSD, d.Limit)
+						}
+						downgraded = true
+					} else if !aiAllowed.Load() {
+						// Cost dropped back under cap (e.g. month rolled over).
+						aiAllowed.Store(true)
+						log.Printf("✓ budget within cap: MTD $%.2f / cap $%.2f — restoring full operation",
+							d.MTDUSD, d.Limit)
 					}
 				}
 				switch ev.Type {
@@ -227,6 +257,10 @@ Credentials (env vars):
 						if modC == nil {
 							return nil
 						}
+						if downgraded {
+							log.Printf("[mod-c] ⏭  skipped (budget downgrade): %s#%d", repo, p.Issue.Number)
+							return nil
+						}
 						log.Printf("[mod-c] dispatching: %s#%d closed (by @%s)",
 							repo, p.Issue.Number, ev.Actor.Login)
 						res, err := modC.ArchiveIssue(ctx, repo, p.Issue.Number)
@@ -248,6 +282,10 @@ Credentials (env vars):
 
 				case "PullRequestEvent":
 					if modB == nil {
+						return nil
+					}
+					if downgraded {
+						log.Printf("[mod-b] ⏭  skipped (budget downgrade)")
 						return nil
 					}
 					p, err := ev.DecodePullRequestPayload()

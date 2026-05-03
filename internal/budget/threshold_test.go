@@ -43,12 +43,14 @@ func TestThreshold_AtOrAboveLimit_StopsOnDefault(t *testing.T) {
 	rec.Record(audit.Entry{Repo: "x/y", Timestamp: now, CostUSD: 5.01})
 
 	cases := []struct {
-		onExceed   string
-		shouldStop bool
+		onExceed        string
+		shouldStop      bool
+		shouldDowngrade bool
 	}{
-		{"stop", true},
-		{"", true},        // default to stop — err on the side of caution
-		{"downgrade", false}, // downgrade reserved; the test asserts ShouldStop only
+		{"stop", true, false},
+		{"", true, false},                // default → stop
+		{"downgrade", false, true},       // explicit downgrade path
+		{"unknown-mode", true, false},    // unrecognised → conservative stop
 	}
 	for _, tc := range cases {
 		th := NewThreshold(rec, "x/y", 10.0, tc.onExceed)
@@ -58,6 +60,13 @@ func TestThreshold_AtOrAboveLimit_StopsOnDefault(t *testing.T) {
 		}
 		if d.ShouldStop != tc.shouldStop {
 			t.Errorf("on_exceed=%q: ShouldStop=%v, want %v", tc.onExceed, d.ShouldStop, tc.shouldStop)
+		}
+		if d.ShouldDowngrade != tc.shouldDowngrade {
+			t.Errorf("on_exceed=%q: ShouldDowngrade=%v, want %v", tc.onExceed, d.ShouldDowngrade, tc.shouldDowngrade)
+		}
+		// Stop and Downgrade are mutually exclusive — never both true.
+		if d.ShouldStop && d.ShouldDowngrade {
+			t.Errorf("on_exceed=%q: stop and downgrade should be mutually exclusive", tc.onExceed)
 		}
 	}
 }

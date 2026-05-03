@@ -35,6 +35,20 @@ func TestResolveIssueType_LabelOverridesDefault(t *testing.T) {
 	}
 }
 
+func TestWithAIGuard_FluentAndStored(t *testing.T) {
+	called := 0
+	m := New(nil, nil, Config{}).WithAIGuard(func() bool {
+		called++
+		return false
+	})
+	if m.aiGuard == nil {
+		t.Fatal("aiGuard not stored")
+	}
+	if !m.aiGuard() && called != 1 {
+		t.Errorf("guard not invoked once on call, called=%d", called)
+	}
+}
+
 func TestResolveIssueType_FirstMatchingLabelWins(t *testing.T) {
 	m := New(nil, nil, Config{
 		LabelToIssueType: map[string]string{
