@@ -19,6 +19,7 @@ import (
 	gh "github.com/45online/roster/internal/adapters/github"
 	"github.com/45online/roster/internal/api"
 	"github.com/45online/roster/internal/audit"
+	"github.com/45online/roster/internal/budget"
 )
 
 // DefaultModel is the Claude model used when none is configured. Sonnet
@@ -132,11 +133,16 @@ func (m *Module) ReviewPR(ctx context.Context, repo string, number int) (*Result
 		return &Result{Skipped: true, SkipReason: reason}, nil
 	}
 
-	review, err := m.askClaude(ctx, pr, diff)
+	review, usage, err := m.askClaude(ctx, pr, diff)
 	if err != nil {
 		return m.fail(entry, started, "claude review", err)
 	}
 	entry.AIExtracted = true
+	entry.InputTokens = usage.InputTokens
+	entry.OutputTokens = usage.OutputTokens
+	entry.CacheCreateTokens = usage.CacheCreationInputTokens
+	entry.CacheReadTokens = usage.CacheReadInputTokens
+	entry.CostUSD = budget.CostForUsage(m.model, usage)
 
 	gate := m.gateVerdict(review.Verdict)
 	body := buildReviewBody(review, m.model, gate != mapEvent(review.Verdict))
@@ -265,7 +271,9 @@ func buildReviewBody(r *Review, model string, downgraded bool) string {
 }
 
 // askClaude builds the messages, calls the API, decodes the JSON.
-func (m *Module) askClaude(ctx context.Context, pr *gh.PullRequest, diff string) (*Review, error) {
+// Returns the Review plus the response Usage so the caller can audit
+// token spend.
+func (m *Module) askClaude(ctx context.Context, pr *gh.PullRequest, diff string) (*Review, api.Usage, error) {
 	prompt := buildReviewPrompt(pr, diff, m.cfg.MaxDiffBytes)
 	contentJSON, _ := json.Marshal(prompt)
 
@@ -279,23 +287,23 @@ func (m *Module) askClaude(ctx context.Context, pr *gh.PullRequest, diff string)
 
 	resp, err := m.api.Complete(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("claude complete: %w", err)
+		return nil, api.Usage{}, fmt.Errorf("claude complete: %w", err)
 	}
 	text := firstTextBlock(resp.Content)
 	if text == "" {
-		return nil, fmt.Errorf("claude returned no text")
+		return nil, resp.Usage, fmt.Errorf("claude returned no text")
 	}
 
 	jsonBody := stripCodeFence(text)
 	var r Review
 	if err := json.Unmarshal([]byte(jsonBody), &r); err != nil {
-		return nil, fmt.Errorf("decode review json: %w (raw: %q)", err, jsonBody)
+		return nil, resp.Usage, fmt.Errorf("decode review json: %w (raw: %q)", err, jsonBody)
 	}
 	if !validVerdict(r.Verdict) {
 		// Default to COMMENT on bogus verdict — never block on AI hallucination.
 		r.Verdict = VerdictComment
 	}
-	return &r, nil
+	return &r, resp.Usage, nil
 }
 
 func validVerdict(v Verdict) bool {

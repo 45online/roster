@@ -46,13 +46,15 @@ func NewExtractor(client api.Client, model string) *Extractor {
 	return &Extractor{client: client, model: model}
 }
 
-// Extract sends the issue to Claude and returns the parsed fields.
-// On any failure (network, invalid JSON) it returns the error so the
-// caller can decide whether to fall back to mechanical mapping.
-func (e *Extractor) Extract(ctx context.Context, issue *github.Issue) (*ExtractedFields, error) {
+// Extract sends the issue to Claude and returns the parsed fields plus
+// the Usage block from the response (so callers can record token spend
+// in the audit log). On any failure (network, invalid JSON) it returns
+// the error so the caller can decide whether to fall back to mechanical
+// mapping.
+func (e *Extractor) Extract(ctx context.Context, issue *github.Issue) (*ExtractedFields, api.Usage, error) {
 	userPrompt, err := buildExtractorPrompt(issue)
 	if err != nil {
-		return nil, err
+		return nil, api.Usage{}, err
 	}
 	contentJSON, _ := json.Marshal(userPrompt)
 
@@ -68,20 +70,20 @@ func (e *Extractor) Extract(ctx context.Context, issue *github.Issue) (*Extracte
 
 	resp, err := e.client.Complete(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("claude complete: %w", err)
+		return nil, api.Usage{}, fmt.Errorf("claude complete: %w", err)
 	}
 
 	text := firstTextBlock(resp.Content)
 	if text == "" {
-		return nil, fmt.Errorf("claude returned no text content")
+		return nil, resp.Usage, fmt.Errorf("claude returned no text content")
 	}
 
 	jsonBody := stripCodeFence(text)
 	var fields ExtractedFields
 	if err := json.Unmarshal([]byte(jsonBody), &fields); err != nil {
-		return nil, fmt.Errorf("decode claude json: %w (raw: %q)", err, jsonBody)
+		return nil, resp.Usage, fmt.Errorf("decode claude json: %w (raw: %q)", err, jsonBody)
 	}
-	return &fields, nil
+	return &fields, resp.Usage, nil
 }
 
 // extractorSystemPrompt is the constant system message instructing Claude

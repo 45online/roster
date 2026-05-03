@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/45online/roster/internal/audit"
+	"github.com/45online/roster/internal/budget"
 	"github.com/45online/roster/internal/creds"
 )
 
@@ -72,13 +73,14 @@ type statusReport struct {
 }
 
 type projectStatus struct {
-	Repo            string         `json:"repo"`
-	HasCursor       bool           `json:"has_cursor"`
-	LastEventID     string         `json:"last_event_id,omitempty"`
-	LastPolledAt    *time.Time     `json:"last_polled_at,omitempty"`
-	HasAuditFile    bool           `json:"has_audit_file"`
-	WindowSummary   audit.Summary  `json:"window_summary"`
-	LatestActivity  *time.Time     `json:"latest_activity,omitempty"`
+	Repo           string                 `json:"repo"`
+	HasCursor      bool                   `json:"has_cursor"`
+	LastEventID    string                 `json:"last_event_id,omitempty"`
+	LastPolledAt   *time.Time             `json:"last_polled_at,omitempty"`
+	HasAuditFile   bool                   `json:"has_audit_file"`
+	WindowSummary  audit.Summary          `json:"window_summary"`
+	LatestActivity *time.Time             `json:"latest_activity,omitempty"`
+	MonthBudget    *budget.MonthlySummary `json:"month_budget,omitempty"`
 }
 
 // cursorFile mirrors poller.Cursor's persisted JSON. We don't import
@@ -155,15 +157,31 @@ func buildStatusReport(baseDir string, window time.Duration) (*statusReport, err
 			// soft-fail
 		}
 
-		// Audit.
-		entries, err := rec.ReadSince(name, since)
+		// Audit + budget. Read since the earlier of (24h window) and
+		// (month start) so a single read serves both summaries.
+		monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+		readSince := since
+		if monthStart.Before(readSince) {
+			readSince = monthStart
+		}
+		entries, err := rec.ReadSince(name, readSince)
 		if err == nil {
 			ps.HasAuditFile = true
-			ps.WindowSummary = audit.Summarize(name, entries)
+			// Window summary uses only entries within the (window) cutoff.
+			windowEntries := make([]audit.Entry, 0, len(entries))
+			for _, e := range entries {
+				if !e.Timestamp.Before(since) {
+					windowEntries = append(windowEntries, e)
+				}
+			}
+			ps.WindowSummary = audit.Summarize(name, windowEntries)
 			if ps.WindowSummary.LatestEntry != nil {
 				t := ps.WindowSummary.LatestEntry.Timestamp
 				ps.LatestActivity = &t
 			}
+			// Month-to-date budget uses all entries within the month.
+			b := budget.SummarizeCurrentMonth(name, entries, now)
+			ps.MonthBudget = &b
 		}
 
 		r.Projects = append(r.Projects, ps)
@@ -231,6 +249,17 @@ func renderStatusReport(w *os.File, r *statusReport) {
 			fmt.Fprintf(w, "    last error   %s — %s\n",
 				humanAgo(r.GeneratedAt, s.LatestErrorTime),
 				truncateString(s.LatestErrorMsg, 120))
+		}
+		if p.MonthBudget != nil && p.MonthBudget.CallCount > 0 {
+			b := p.MonthBudget
+			parts := make([]string, 0, len(b.ByModule))
+			for k, v := range b.ByModule {
+				parts = append(parts, fmt.Sprintf("%s=$%.2f", k, v))
+			}
+			sort.Strings(parts)
+			fmt.Fprintf(w, "    budget MTD   $%.2f over %d AI calls (%s) · %dk in / %dk out\n",
+				b.TotalUSD, b.CallCount, strings.Join(parts, ", "),
+				b.TokensIn/1000, b.TokensOut/1000)
 		}
 	}
 }

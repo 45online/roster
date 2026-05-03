@@ -32,9 +32,17 @@ type Entry struct {
 	EventID   string    `json:"event_id,omitempty"`
 	EventType string    `json:"event_type,omitempty"`
 
-	// AI usage flag — true if Claude extractor produced the fields used.
-	AIExtracted bool `json:"ai_extracted,omitempty"`
+	// AI usage flag — true if Claude produced the fields used.
+	AIExtracted bool   `json:"ai_extracted,omitempty"`
 	Model       string `json:"model,omitempty"`
+
+	// Token usage from the Claude API response. Filled by modules that
+	// invoke Claude. Omitted when no AI call was made.
+	InputTokens       int     `json:"in_tok,omitempty"`
+	OutputTokens      int     `json:"out_tok,omitempty"`
+	CacheCreateTokens int     `json:"cache_create_tok,omitempty"`
+	CacheReadTokens   int     `json:"cache_read_tok,omitempty"`
+	CostUSD           float64 `json:"cost_usd,omitempty"`
 
 	// Outcome.
 	JiraKey string `json:"jira_key,omitempty"`

@@ -31,7 +31,8 @@ GitHub  ←→  Roster (AI 员工)  ←→  Jira / Confluence / Slack
 | 4. Module C: Issue close → Confluence(`archive-issue` + 接入 takeover) | ✅ 已完成 |
 | 5. Module D: 告警聚合 → Slack(`aggregate-alert`,无 AI 纯模板) | ✅ 已完成 |
 | 6.a `roster status` + `roster logs` 观察面板 | ✅ 已完成 |
-| 6.b Webhook 模式 + Budget 跟踪 + 告警 | ⏳ 下一步 |
+| 6.b Budget 跟踪(token + cost,按月汇总) | ✅ 已完成 |
+| 6.c Webhook 模式 + Budget 阈值告警 | ⏳ 下一步 |
 
 二进制可编译运行,Module A 已可通过 `roster sync-issue` 手动触发完成
 GitHub Issue → Jira 的端到端同步。后台 poller 与其他模块尚未实现。
@@ -244,6 +245,20 @@ $ roster logs foo/bar --status error -f
 ```
 
 `--json` 标志在两个命令上都可用,方便接外部监控。
+
+每次 Claude 调用的 token 数 / 美元成本会写入 audit 行,`roster status` 自动汇总当月支出:
+
+```
+Projects (1, last 24h):
+
+  foo/bar
+    audit        4 events: 4 success, 0 partial, 0 error, 0 skipped
+    by module    alert_aggregation=1, issue_to_jira=1, pr_review=2
+    last event   just now
+    budget MTD   $0.11 over 3 AI calls (issue_to_jira=$0.00, pr_review=$0.11) · 29k in / 1k out
+```
+
+价格表内置 Claude 4.x 系列(Opus / Sonnet / Haiku),cache write/read 按 1.25× / 0.10× input 自动派生。Module D 不调 AI,自然不产生成本。
 
 **C. 启用 Claude 智能字段抽取(可选)**
 

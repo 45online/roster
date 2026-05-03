@@ -12,7 +12,9 @@ import (
 
 	gh "github.com/45online/roster/internal/adapters/github"
 	"github.com/45online/roster/internal/adapters/jira"
+	"github.com/45online/roster/internal/api"
 	"github.com/45online/roster/internal/audit"
+	"github.com/45online/roster/internal/budget"
 )
 
 // Config holds Module A's per-project configuration.
@@ -91,10 +93,11 @@ func (m *Module) SyncIssue(ctx context.Context, repo string, number int) (*Resul
 	}
 	entry.Actor = issue.User.Login
 
-	summary, issueType, priority, component, aiUsed := m.deriveFields(ctx, issue)
+	summary, issueType, priority, component, aiUsed, usage := m.deriveFields(ctx, issue)
 	entry.AIExtracted = aiUsed
 	if aiUsed && m.extractor != nil {
 		entry.Model = m.extractor.model
+		fillTokens(&entry, m.extractor.model, usage)
 	}
 
 	createReq := jira.CreateIssueRequest{
@@ -136,16 +139,18 @@ func (m *Module) SyncIssue(ctx context.Context, repo string, number int) (*Resul
 // deriveFields chooses the values for summary / issue type / priority /
 // component, preferring the AI extractor when available and falling back
 // to mechanical mapping for any field the extractor omits or fails on.
+// Returns the Claude Usage block for callers to record token spend.
 func (m *Module) deriveFields(ctx context.Context, issue *gh.Issue) (
-	summary, issueType, priority, component string, aiUsed bool,
+	summary, issueType, priority, component string, aiUsed bool, usage api.Usage,
 ) {
 	if m.extractor != nil {
-		if f, err := m.extractor.Extract(ctx, issue); err == nil && f != nil {
+		if f, u, err := m.extractor.Extract(ctx, issue); err == nil && f != nil {
 			summary = strings.TrimSpace(f.Summary)
 			issueType = f.IssueType
 			priority = f.Priority
 			component = f.Component
 			aiUsed = true
+			usage = u
 		}
 	}
 	if summary == "" {
@@ -158,6 +163,16 @@ func (m *Module) deriveFields(ctx context.Context, issue *gh.Issue) (
 		priority = m.resolvePriority(issue)
 	}
 	return
+}
+
+// fillTokens copies the Usage block onto the audit Entry and computes the
+// dollar cost from the model price table.
+func fillTokens(e *audit.Entry, model string, u api.Usage) {
+	e.InputTokens = u.InputTokens
+	e.OutputTokens = u.OutputTokens
+	e.CacheCreateTokens = u.CacheCreationInputTokens
+	e.CacheReadTokens = u.CacheReadInputTokens
+	e.CostUSD = budget.CostForUsage(model, u)
 }
 
 // resolveIssueType picks a Jira issue type by:

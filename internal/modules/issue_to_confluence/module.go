@@ -20,6 +20,7 @@ import (
 	"github.com/45online/roster/internal/adapters/slack"
 	"github.com/45online/roster/internal/api"
 	"github.com/45online/roster/internal/audit"
+	"github.com/45online/roster/internal/budget"
 )
 
 // DefaultModel is Sonnet — Module C produces longer-form prose than
@@ -112,11 +113,16 @@ func (m *Module) ArchiveIssue(ctx context.Context, repo string, number int) (*Re
 		return m.fail(entry, started, "list comments", err)
 	}
 
-	doc, err := m.askClaude(ctx, repo, issue, comments)
+	doc, usage, err := m.askClaude(ctx, repo, issue, comments)
 	if err != nil {
 		return m.fail(entry, started, "claude summarize", err)
 	}
 	entry.AIExtracted = true
+	entry.InputTokens = usage.InputTokens
+	entry.OutputTokens = usage.OutputTokens
+	entry.CacheCreateTokens = usage.CacheCreationInputTokens
+	entry.CacheReadTokens = usage.CacheReadInputTokens
+	entry.CostUSD = budget.CostForUsage(m.model, usage)
 
 	page, err := m.confluence.CreateDraft(ctx, confluence.CreateDraftRequest{
 		SpaceID:     m.cfg.SpaceID,
@@ -172,8 +178,9 @@ type Document struct {
 	PRLinks  []string `json:"pr_links"`
 }
 
-// askClaude builds the prompt, calls Claude, decodes the JSON.
-func (m *Module) askClaude(ctx context.Context, repo string, issue *gh.Issue, comments []gh.IssueComment) (*Document, error) {
+// askClaude builds the prompt, calls Claude, decodes the JSON. Returns
+// the Document plus the response Usage for audit.
+func (m *Module) askClaude(ctx context.Context, repo string, issue *gh.Issue, comments []gh.IssueComment) (*Document, api.Usage, error) {
 	user := buildSummarizePrompt(repo, issue, comments)
 	contentJSON, _ := json.Marshal(user)
 
@@ -186,22 +193,22 @@ func (m *Module) askClaude(ctx context.Context, repo string, issue *gh.Issue, co
 	}
 	resp, err := m.api.Complete(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("claude complete: %w", err)
+		return nil, api.Usage{}, fmt.Errorf("claude complete: %w", err)
 	}
 	text := firstTextBlock(resp.Content)
 	if text == "" {
-		return nil, fmt.Errorf("claude returned no text")
+		return nil, resp.Usage, fmt.Errorf("claude returned no text")
 	}
 
 	jsonBody := stripCodeFence(text)
 	var d Document
 	if err := json.Unmarshal([]byte(jsonBody), &d); err != nil {
-		return nil, fmt.Errorf("decode summary json: %w (raw: %q)", err, jsonBody)
+		return nil, resp.Usage, fmt.Errorf("decode summary json: %w (raw: %q)", err, jsonBody)
 	}
 	if strings.TrimSpace(d.Title) == "" {
 		d.Title = strings.TrimSpace(issue.Title)
 	}
-	return &d, nil
+	return &d, resp.Usage, nil
 }
 
 // hasLabel reports whether the issue carries the named label (case-insensitive).

@@ -75,13 +75,19 @@ file works too — this command just adds filtering and pretty-printing.
 			if err != nil {
 				return err
 			}
-			lastSize, err := emitEntries(os.Stdout, entries, filter, jsonOutput)
-			if err != nil {
+			if err := emitEntries(os.Stdout, entries, filter, jsonOutput); err != nil {
 				return err
 			}
 
 			if !follow {
 				return nil
+			}
+
+			// Capture current file size as the follow starting point so we
+			// don't re-print what we just emitted.
+			var lastSize int64
+			if info, err := os.Stat(path); err == nil {
+				lastSize = info.Size()
 			}
 
 			// Follow loop: poll the file size, read new bytes, parse.
@@ -117,9 +123,8 @@ file works too — this command just adds filtering and pretty-printing.
 	return cmd
 }
 
-// emitEntries pretty-prints (or JSON-prints) entries that pass filter.
-// Returns the file size after the read so a follow loop can resume.
-func emitEntries(w *os.File, entries []audit.Entry, filter func(audit.Entry) bool, jsonOutput bool) (int64, error) {
+// emitEntries pretty-prints (or JSON-prints) entries that pass the filter.
+func emitEntries(w *os.File, entries []audit.Entry, filter func(audit.Entry) bool, jsonOutput bool) error {
 	for _, e := range entries {
 		if !filter(e) {
 			continue
@@ -131,8 +136,7 @@ func emitEntries(w *os.File, entries []audit.Entry, filter func(audit.Entry) boo
 		}
 		fmt.Fprintln(w, formatLogLine(e))
 	}
-	// Caller will set lastSize from os.Stat after this returns.
-	return 0, nil
+	return nil
 }
 
 // followOnce stats the file, reads any newly-appended bytes, parses lines
