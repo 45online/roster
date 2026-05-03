@@ -7,8 +7,64 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-Nothing pending. The v0.1.x series implements every phase planned in
-`docs/DESIGN.md`. Next chapter is real-world dogfood feedback.
+Nothing pending. v0.2.0 added multi-LLM-provider support on top of the
+v0.1.x feature-complete base. Next chapter is real-world dogfood
+feedback (DeepSeek vs. Claude on actual issues / PRs / archives).
+
+---
+
+## [v0.2.0] — 2026-05-03
+
+**Multi-LLM provider.** Roster's AI calls are no longer hard-bound to
+Claude. Configure any OpenAI Chat Completions-compatible endpoint
+(DeepSeek, xAI, Gemini's OpenAI-compat, OpenAI, Together, Groq, ...)
+via `roster login llm` or `ROSTER_LLM_*` env vars.
+
+Why this matters: Module A / B / C all do simple structured extraction.
+DeepSeek-Chat at $0.27/M input is ~10× cheaper than Claude Haiku for
+the same job, ~30× cheaper than Claude Sonnet.
+
+### Added
+- `internal/creds.LLMCreds` (`provider` / `base_url` / `model` /
+  `api_key`) and matching `Has("llm")` / `Clear("llm")`. Legacy
+  `ClaudeCreds` remains for backward compat.
+- `internal/projcfg.LLM` block in `.roster/config.yml`. `Validate()`
+  rejects unknown providers and missing `base_url` / `model` for
+  openai-compatible.
+- `roster login llm` subcommand (provider / base_url / model / api_key
+  prompts). `roster login status` shows the current provider+model.
+- `roster login logout llm` — symmetric removal.
+- 5-layer credential resolution: env vars → `~/.roster/credentials.json
+  llm` → project config → legacy `ANTHROPIC_API_KEY` →
+  `~/.roster/credentials.json claude`. v0.1.x users upgrade with no
+  config change.
+- `internal/budget/pricing.go` extended with GPT-4o / 4o-mini / 4.1[-mini],
+  DeepSeek chat / reasoner, Gemini 2.0/2.5 flash + 2.5 pro, Grok 2/3.
+  `roster status` MTD cost tracks each model's actual rate.
+
+### Changed
+- `roster takeover` startup banner: `✓ AI extractor enabled
+  (provider=openai-compatible · model=deepseek-chat)` instead of
+  `✓ Claude extractor enabled`.
+- `roster sync-issue` / `review-pr` / `archive-issue` switched from
+  the legacy `.claude()` resolver to the unified `.llm(cfg.LLM)` one.
+
+### Fixed
+- TUI welcome banner no longer falls back to a hardcoded vendor model
+  string (`claude-sonnet-4-20250514`) when no model is configured —
+  instead nudges the operator to fill in `llm.model`. Undercover
+  invariant: don't leak vendor defaults via display.
+- Removed " · API Usage Billing" from the welcome banner — that was
+  upstream Claude Code's billing hint and meaningless for Roster.
+- `promptLine()` rebuilt `bufio.NewReader(os.Stdin)` on every call,
+  losing buffered bytes — the second prompt of a multi-prompt
+  subcommand saw EOF. Hoisted to a single package-level reader.
+  Surfaced by `roster login llm` (4 prompts);
+  `roster login github` (1 prompt) didn't trigger it.
+
+### Visual polish
+- Welcome banner is now wrapped in a rounded card with the indigo
+  brand colour on the border.
 
 ---
 

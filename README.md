@@ -173,7 +173,7 @@ roster takeover --repo owner/name    # 自动从 .roster/config.yml 读 jira_pro
 
 **D. Module B:PR AI Review**
 
-需要 Claude 凭证(`roster login claude` 或 `ANTHROPIC_API_KEY`)。
+需要 LLM 凭证(`roster login llm` 配 DeepSeek / Gemini / OpenAI / Claude 任一,或老路径 `roster login claude` / `ANTHROPIC_API_KEY`)。
 
 手动一次性:
 ```bash
@@ -200,7 +200,7 @@ modules:
 
 **E. Module C:Issue close → Confluence 草稿**
 
-需要 Atlassian 凭证(`roster login jira` —— Confluence 复用同一组)+ Claude 凭证。Slack 通知是可选的。
+需要 Atlassian 凭证(`roster login jira` —— Confluence 复用同一组)+ LLM 凭证(`roster login llm`)。Slack 通知是可选的。
 
 手动一次性:
 ```bash
