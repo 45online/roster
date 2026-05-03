@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -130,27 +131,30 @@ func TestParse_Errors(t *testing.T) {
 
 // ── handler.go ────────────────────────────────────────────────────────
 
+// fakeDispatcher counters use atomic.Int32 because handler.go runs the
+// module verbs in a goroutine — without atomics, the post-Sleep read in
+// TestHandler_SyncIssueIsAsync races with the async write under -race.
 type fakeDispatcher struct {
-	syncCalls    int
-	reviewCalls  int
-	archiveCalls int
-	statusCalls  int
+	syncCalls    atomic.Int32
+	reviewCalls  atomic.Int32
+	archiveCalls atomic.Int32
+	statusCalls  atomic.Int32
 }
 
 func (f *fakeDispatcher) SyncIssue(ctx context.Context, repo string, n int) (string, error) {
-	f.syncCalls++
+	f.syncCalls.Add(1)
 	return fmt.Sprintf("ABC-%d", n), nil
 }
 func (f *fakeDispatcher) ReviewPR(ctx context.Context, repo string, n int) (string, error) {
-	f.reviewCalls++
+	f.reviewCalls.Add(1)
 	return "comment", nil
 }
 func (f *fakeDispatcher) ArchiveIssue(ctx context.Context, repo string, n int) (string, error) {
-	f.archiveCalls++
+	f.archiveCalls.Add(1)
 	return "page-id", nil
 }
 func (f *fakeDispatcher) Status(ctx context.Context) (string, error) {
-	f.statusCalls++
+	f.statusCalls.Add(1)
 	return "ok", nil
 }
 
@@ -185,8 +189,8 @@ func TestHandler_StatusInline(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
 	}
-	if d.statusCalls != 1 {
-		t.Errorf("expected 1 Status call, got %d", d.statusCalls)
+	if got := d.statusCalls.Load(); got != 1 {
+		t.Errorf("expected 1 Status call, got %d", got)
 	}
 	if !strings.Contains(w.Body.String(), `"text"`) {
 		t.Errorf("body should be Slack JSON: %s", w.Body.String())
@@ -218,8 +222,8 @@ func TestHandler_SyncIssueIsAsync(t *testing.T) {
 	}
 	// The async work eventually runs; small wait + assert.
 	time.Sleep(50 * time.Millisecond)
-	if d.syncCalls != 1 {
-		t.Errorf("expected 1 SyncIssue call, got %d", d.syncCalls)
+	if got := d.syncCalls.Load(); got != 1 {
+		t.Errorf("expected 1 SyncIssue call, got %d", got)
 	}
 }
 
@@ -236,7 +240,8 @@ func TestHandler_BadSignatureRejected(t *testing.T) {
 	if w.Code != http.StatusUnauthorized {
 		t.Errorf("expected 401, got %d", w.Code)
 	}
-	if d.syncCalls+d.statusCalls+d.reviewCalls+d.archiveCalls != 0 {
+	total := d.syncCalls.Load() + d.statusCalls.Load() + d.reviewCalls.Load() + d.archiveCalls.Load()
+	if total != 0 {
 		t.Error("dispatcher must not run on bad signature")
 	}
 }
