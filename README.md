@@ -287,6 +287,21 @@ Projects (1, last 24h):
 
 价格表内置 Claude 4.x 系列(Opus / Sonnet / Haiku),cache write/read 按 1.25× / 0.10× input 自动派生。Module D 不调 AI,自然不产生成本。
 
+### 预算阈值(防 runaway)
+
+`.roster/config.yml` 设 `budget.monthly_usd` 后,`roster takeover` 会:
+
+1. **启动时** 显示 MTD vs cap,如果当前已经超限就拒绝启动:
+   ```
+   ✓ Budget MTD: $0.43 / $50.00 cap (on_exceed=stop)
+   ```
+2. **每次事件分发前** 检查当月累计成本(30 秒 TTL 缓存,免每次重读 audit)
+3. **超限时** 按 `on_exceed` 处理:
+   - `stop`(默认):打印 `⛔ budget exceeded` 然后退出 daemon
+   - `downgrade`(预留,目前等同 `stop`):未来支持关 AI 走 fallback
+
+读 audit 失败时**fail open**(不阻塞业务),避免成为新的故障点。
+
 **C. 启用 Claude 智能字段抽取(可选)**
 
 设置 `ANTHROPIC_API_KEY` 后,Module A 会让 Claude 读 issue body,生成更精炼的 summary、推断 issue type / priority / component:

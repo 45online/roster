@@ -18,6 +18,7 @@ import (
 	"github.com/45online/roster/internal/adapters/slack"
 	"github.com/45online/roster/internal/api"
 	"github.com/45online/roster/internal/audit"
+	"github.com/45online/roster/internal/budget"
 	"github.com/45online/roster/internal/modules/issue_to_confluence"
 	"github.com/45online/roster/internal/modules/issue_to_jira"
 	"github.com/45online/roster/internal/modules/pr_review"
@@ -171,7 +172,33 @@ Credentials (env vars):
 			}
 			fmt.Printf("✓ Authenticated as @%s (anti-loop filter armed)\n", selfLogin)
 
+			// Budget threshold (optional): refuses to start if already over,
+			// stops the daemon at first event after the cap is breached.
+			var threshold *budget.Threshold
+			if cfg.Budget.MonthlyUSD > 0 {
+				threshold = budget.NewThreshold(recorder, repo, cfg.Budget.MonthlyUSD, cfg.Budget.OnExceed)
+				d := threshold.Check(time.Now().UTC())
+				fmt.Printf("✓ Budget MTD: $%.2f / $%.2f cap (on_exceed=%s)\n",
+					d.MTDUSD, d.Limit, orDefault(cfg.Budget.OnExceed, "stop"))
+				if d.ShouldStop {
+					return fmt.Errorf("budget already exceeded ($%.2f / $%.2f); refusing to start (set on_exceed=downgrade or raise the cap)",
+						d.MTDUSD, d.Limit)
+				}
+			}
+
 			handler := func(ctx context.Context, ev gh.Event) error {
+				// Budget gate — runs before every dispatch. When the cap
+				// is breached and on_exceed=stop, cancel the daemon ctx
+				// so the poller's main loop exits cleanly on the next tick.
+				if threshold != nil {
+					d := threshold.Check(time.Now().UTC())
+					if d.ShouldStop {
+						log.Printf("⛔ budget exceeded: MTD $%.2f / cap $%.2f — stopping per on_exceed=stop",
+							d.MTDUSD, d.Limit)
+						cancel()
+						return fmt.Errorf("budget exceeded")
+					}
+				}
 				switch ev.Type {
 				case "IssuesEvent":
 					p, err := ev.DecodeIssuesPayload()
