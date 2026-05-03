@@ -16,7 +16,9 @@ GitHub  ←→  Roster (AI 员工)  ←→  Jira / Confluence / Slack
 
 ## 状态
 
-**已发布:[v0.1.5](https://github.com/45online/roster/releases/tag/v0.1.5)** —— 4 个业务模块全部端到端可用,有 budget 跟踪 + 阈值告警,有跨平台二进制 + 多架构 docker 镜像。还在 alpha 阶段,等待真实场景的反馈。
+**已发布:[v0.1.5](https://github.com/45online/roster/releases/tag/v0.1.5)** —— design 文档规划的所有阶段都已实现:4 个业务模块端到端,Budget 双模阈值,Undercover 身份隔离,Polling + Webhook 双事件源,跨平台二进制 + 多架构 docker。
+
+**下一阶段:dogfood**。功能填空到此为止,接下来在真 repo 上跑一周,看 prompt 调优 / 模块边界 / UX 痛点暴露什么真正的问题再做。完整 release 历史见 [CHANGELOG.md](CHANGELOG.md)。
 
 | 阶段 | 状态 |
 |---|---|
