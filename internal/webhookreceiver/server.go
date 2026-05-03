@@ -33,6 +33,10 @@ type Config struct {
 	// sender matches this login are dropped (anti-loop), mirroring
 	// the poller behaviour.
 	SelfLogin string
+	// ExtraRoutes lets the caller attach side-channel handlers on the
+	// same listener — e.g. a Slack slash-command receiver. Keys are URL
+	// paths (e.g. "/slack/command"). Nil values are ignored.
+	ExtraRoutes map[string]http.Handler
 }
 
 // Server wraps net/http. Use NewServer + Run.
@@ -63,6 +67,12 @@ func NewServer(cfg Config) (*Server, error) {
 	s := &Server{cfg: cfg, logger: cfg.Logger}
 	mux.HandleFunc(cfg.Path, s.handleWebhook)
 	mux.HandleFunc("/healthz", s.handleHealth)
+	for path, h := range cfg.ExtraRoutes {
+		if h == nil || path == "" {
+			continue
+		}
+		mux.Handle(path, h)
+	}
 	s.srv = &http.Server{
 		Addr:              cfg.Listen,
 		Handler:           mux,

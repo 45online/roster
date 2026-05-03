@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"sync/atomic"
@@ -25,6 +26,7 @@ import (
 	"github.com/45online/roster/internal/modules/pr_review"
 	"github.com/45online/roster/internal/poller"
 	"github.com/45online/roster/internal/projcfg"
+	"github.com/45online/roster/internal/slackbridge"
 	"github.com/45online/roster/internal/webhookreceiver"
 )
 
@@ -331,12 +333,38 @@ Credentials (env vars):
 				if secret == "" {
 					return fmt.Errorf("webhook.enabled=true but no secret (set webhook.secret in config or ROSTER_WEBHOOK_SECRET in env)")
 				}
+
+				// Optional Slack slash-command bridge (shares the HTTP
+				// listener with the GitHub webhook on a different path).
+				extraRoutes := map[string]http.Handler{}
+				if cfg.Slack.Enabled {
+					slackSecret := cfg.Slack.SigningSecret
+					if slackSecret == "" {
+						slackSecret = os.Getenv("ROSTER_SLACK_SIGNING_SECRET")
+					}
+					if slackSecret == "" {
+						return fmt.Errorf("slack.enabled=true but no signing_secret (set slack.signing_secret or ROSTER_SLACK_SIGNING_SECRET)")
+					}
+					path := orDefault(cfg.Slack.Path, "/slack/command")
+					extraRoutes[path] = &slackbridge.Handler{
+						Secret: slackSecret,
+						Dispatcher: &takeoverSlackDispatcher{
+							repo: repo,
+							modA: modA,
+							modB: modB,
+							modC: modC,
+						},
+					}
+					fmt.Printf("✓ Slack slash-command receiver listening on %s (configure /roster command's Request URL accordingly)\n", path)
+				}
+
 				srv, err := webhookreceiver.NewServer(webhookreceiver.Config{
-					Listen:    cfg.Webhook.Listen,
-					Path:      cfg.Webhook.Path,
-					Secret:    secret,
-					SelfLogin: selfLogin,
-					Handler:   handler,
+					Listen:      cfg.Webhook.Listen,
+					Path:        cfg.Webhook.Path,
+					Secret:      secret,
+					SelfLogin:   selfLogin,
+					Handler:     handler,
+					ExtraRoutes: extraRoutes,
 				})
 				if err != nil {
 					return err
@@ -348,6 +376,10 @@ Credentials (env vars):
 					return nil
 				}
 				return err
+			}
+
+			if cfg.Slack.Enabled && !cfg.Webhook.Enabled {
+				fmt.Fprintln(os.Stderr, "⚠ slack.enabled=true but webhook.enabled=false — Slack receiver requires the embedded HTTP server; skipping")
 			}
 
 			p, err := poller.New(poller.Config{
@@ -401,6 +433,74 @@ func modelHint(model string) string {
 		return ""
 	}
 	return " · model=" + model
+}
+
+// takeoverSlackDispatcher adapts the daemon's already-wired modules to
+// the slackbridge.Dispatcher interface. Each method does a repo guard
+// (this daemon instance manages a single repo; trying to act on a
+// different one is a no-op) and translates Module Result structs into
+// short human-readable strings for the Slack acknowledgement log line.
+type takeoverSlackDispatcher struct {
+	repo string
+	modA *issue_to_jira.Module
+	modB *pr_review.Module
+	modC *issue_to_confluence.Module
+}
+
+func (d *takeoverSlackDispatcher) checkRepo(repo string) error {
+	if repo != d.repo {
+		return fmt.Errorf("this Roster instance manages %q, not %q", d.repo, repo)
+	}
+	return nil
+}
+
+func (d *takeoverSlackDispatcher) SyncIssue(ctx context.Context, repo string, n int) (string, error) {
+	if err := d.checkRepo(repo); err != nil {
+		return "", err
+	}
+	res, err := d.modA.SyncIssue(ctx, repo, n)
+	if err != nil && res == nil {
+		return "", err
+	}
+	return fmt.Sprintf("Created %s", res.JiraKey), nil
+}
+
+func (d *takeoverSlackDispatcher) ReviewPR(ctx context.Context, repo string, n int) (string, error) {
+	if d.modB == nil {
+		return "", fmt.Errorf("Module B (pr_review) is not enabled")
+	}
+	if err := d.checkRepo(repo); err != nil {
+		return "", err
+	}
+	res, err := d.modB.ReviewPR(ctx, repo, n)
+	if err != nil {
+		return "", err
+	}
+	if res.Skipped {
+		return "Skipped: " + res.SkipReason, nil
+	}
+	return fmt.Sprintf("Submitted (%s, %d inline comments)", res.Verdict, res.CommentCount), nil
+}
+
+func (d *takeoverSlackDispatcher) ArchiveIssue(ctx context.Context, repo string, n int) (string, error) {
+	if d.modC == nil {
+		return "", fmt.Errorf("Module C (issue_to_confluence) is not enabled")
+	}
+	if err := d.checkRepo(repo); err != nil {
+		return "", err
+	}
+	res, err := d.modC.ArchiveIssue(ctx, repo, n)
+	if err != nil && res == nil {
+		return "", err
+	}
+	if res.Skipped {
+		return "Skipped: " + res.Reason, nil
+	}
+	return "Draft " + res.PageID + " created", nil
+}
+
+func (d *takeoverSlackDispatcher) Status(ctx context.Context) (string, error) {
+	return fmt.Sprintf("Roster managing *%s* — run `roster status` from a shell for the full dashboard.", d.repo), nil
 }
 
 // signalContext returns a Context that's cancelled on SIGINT or SIGTERM.

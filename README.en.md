@@ -345,6 +345,36 @@ Then on GitHub repo Settings → Webhooks:
 
 Features: HMAC-SHA256 verification (constant-time), event mapping `issues→IssuesEvent` / `pull_request→PullRequestEvent`, `ping` returns 200, `/healthz`, anti-loop, 5MB body cap. **Mutually exclusive** with polling — webhook UUIDs and events-API IDs don't dedupe across the two sources.
 
+### Slack slash command (optional)
+
+When webhook mode is on, team members can trigger Roster from Slack:
+
+```
+/roster status                         show Roster's current state
+/roster sync-issue owner/name#42       trigger Module A
+/roster review-pr  owner/name#42       trigger Module B
+/roster archive-issue owner/name#42    trigger Module C
+/roster help                           show this list
+```
+
+`.roster/config.yml`:
+```yaml
+slack:
+  enabled: true
+  path: /slack/command
+  signing_secret: ""    # or export ROSTER_SLACK_SIGNING_SECRET=...
+```
+
+Configuring the Slack app:
+1. [api.slack.com/apps](https://api.slack.com/apps) → Create New App → From scratch
+2. Slash Commands → Create New Command:
+   - Command: `/roster`
+   - Request URL: `https://<your-public-host>/slack/command`
+3. Basic Information → copy "Signing Secret" → put it in `signing_secret` (or env)
+4. Install to Workspace
+
+Features: HMAC-v0 signature verification (constant-time + 5-min replay window). `status` runs synchronously and returns inline; `sync-issue` / `review-pr` / `archive-issue` immediately ack with `:hourglass_flowing_sand: queued` and run in a background goroutine (Slack's 3-second response window forbids running the full module call inline). Results land in GitHub / Jira / Confluence directly, not back in Slack. The dispatcher guards against cross-repo invocations: a Roster pod manages a single repo, and the Slack command's repo must match.
+
 ### Undercover Mode (always on)
 
 The virtual employee is, to outside readers, indistinguishable from a human teammate. Two layers:

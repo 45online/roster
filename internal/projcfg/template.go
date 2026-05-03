@@ -98,5 +98,21 @@ webhook:
   path: /webhook/github
   secret: ""                 # or set ROSTER_WEBHOOK_SECRET in env
 
+# Optional: Slack slash command receiver. Lets a teammate trigger Roster
+# from Slack:
+#   /roster status
+#   /roster sync-issue owner/name#42
+#   /roster review-pr  owner/name#42
+#   /roster archive-issue owner/name#42
+# Shares the HTTP listener with 'webhook' above, so 'webhook.enabled'
+# must also be true. Configure the Slack app: Slash Commands → Add new
+# command (/roster) → Request URL = <public URL>/slack/command. Copy
+# the Signing Secret from Basic Information into 'signing_secret' below
+# (or env ROSTER_SLACK_SIGNING_SECRET).
+slack:
+  enabled: false
+  path: /slack/command
+  signing_secret: ""         # or set ROSTER_SLACK_SIGNING_SECRET in env
+
 dry_run: false               # true = log what would happen but don't write
 `

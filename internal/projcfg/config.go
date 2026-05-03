@@ -20,7 +20,22 @@ type Config struct {
 	Modules     Modules `yaml:"modules"`
 	Budget      Budget  `yaml:"budget"`
 	Webhook     Webhook `yaml:"webhook"`
+	Slack       Slack   `yaml:"slack"`
 	DryRun      bool    `yaml:"dry_run"`
+}
+
+// Slack configures the embedded Slack slash-command receiver. The
+// command lets a teammate trigger sync-issue / review-pr / archive-
+// issue / status from Slack without leaving the channel.
+//
+// Slack runs on the SAME HTTP listener as the GitHub webhook (so this
+// only fires when webhook.enabled is also true), at a separate path.
+// SigningSecret is the workspace-level "Signing Secret" from the
+// Slack app's Basic Information page.
+type Slack struct {
+	Enabled       bool   `yaml:"enabled"`
+	Path          string `yaml:"path"`           // default "/slack/command"
+	SigningSecret string `yaml:"signing_secret"` // or env ROSTER_SLACK_SIGNING_SECRET
 }
 
 // LLM selects the AI provider Roster uses for Modules A / B / C.

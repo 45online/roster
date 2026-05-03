@@ -7,9 +7,53 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-Nothing pending. v0.2.0 added multi-LLM-provider support on top of the
-v0.1.x feature-complete base. Next chapter is real-world dogfood
-feedback (DeepSeek vs. Claude on actual issues / PRs / archives).
+Nothing pending after v0.2.1. Real-world dogfood feedback is the next
+chapter — both the multi-LLM provider switch (DeepSeek vs Claude on
+actual workloads) and the operational paths just shipped (Helm /
+Slack).
+
+---
+
+## [v0.2.1] — 2026-05-03
+
+**Helm chart + Slack slash command.** Two operational additions on top
+of v0.2.0's multi-LLM-provider work; binary semantics unchanged.
+
+### Added
+- `charts/roster/` Helm chart (chart v0.1.0, appVersion 0.2.1):
+  - Deployment + ConfigMap + Secret + PVC, optional Service + Ingress
+    when webhook mode is on.
+  - `replicas: 1` + `Recreate` strategy (cursor isn't concurrent-safe).
+  - `repo` is required; chart fails fast when missing.
+  - `credentials.existingSecret` lets users keep keys in Sealed
+    Secrets / External Secrets / SOPS instead of Helm values history.
+  - Pod annotations (`checksum/config`, `checksum/secret`) roll the
+    deployment when the rendered config / chart-managed secret changes.
+- `internal/slackbridge/` Slack slash-command receiver:
+  - HMAC-v0 signature verification (`X-Slack-Signature` /
+    `X-Slack-Request-Timestamp`) with a 5-minute replay window.
+  - Verbs: `help`, `status`, `sync-issue`, `review-pr`, `archive-issue`.
+  - `status` runs synchronously (cheap); the three module verbs
+    immediately ack with `queued` and run in a background goroutine
+    so the 3-second Slack response budget isn't blown.
+  - Single-repo guard: the Slack command's repo must match the repo
+    the daemon manages.
+  - 18 tests covering signature, parser, and HTTP integration.
+- `internal/projcfg.Slack` config block — enabled / path /
+  signing_secret. Validation guarded; env override
+  `ROSTER_SLACK_SIGNING_SECRET`.
+- `internal/webhookreceiver.Config.ExtraRoutes` so Slack reuses the
+  same HTTP listener as the GitHub webhook (different path).
+
+### Changed
+- `roster takeover` startup logs a "✓ Slack slash-command receiver
+  listening on /slack/command" line when both webhook and slack are
+  enabled.
+
+### Notes
+- Slack mode requires `webhook.enabled=true` (it shares the HTTP
+  listener). A warning is printed if `slack.enabled=true` is set
+  without webhook.
 
 ---
 

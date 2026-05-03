@@ -382,6 +382,41 @@ GitHub 配置(repo Settings → Webhooks):
 
 ⚠️ Webhook 与 polling **互斥** —— 启用 webhook 后 poller 不跑(避免双重处理:两者 event ID 来源不同,无法 dedupe)。
 
+### Slack slash command(可选)
+
+webhook 模式开启后,可以让团队从 Slack 直接触发 Roster:
+
+```
+/roster status                         → 查看 Roster 接管状态
+/roster sync-issue owner/name#42      → 触发 Module A
+/roster review-pr  owner/name#42      → 触发 Module B
+/roster archive-issue owner/name#42   → 触发 Module C
+/roster help                           → 命令帮助
+```
+
+`.roster/config.yml`:
+```yaml
+slack:
+  enabled: true
+  path: /slack/command
+  signing_secret: ""    # 或 export ROSTER_SLACK_SIGNING_SECRET=...
+```
+
+GitHub-style 配置(Slack app):
+1. 在 [api.slack.com/apps](https://api.slack.com/apps) Create New App → From scratch
+2. **Slash Commands** → Create New Command:
+   - Command: `/roster`
+   - Request URL: `https://<your-public-host>/slack/command`
+   - Short description: `Trigger Roster modules`
+3. **Basic Information** → 复制 "Signing Secret"(填 `signing_secret` 或 env)
+4. **Install to Workspace**
+
+特性:
+- **HMAC v0** 签名验证(constant-time + 5 分钟防重放窗口)
+- **`status` 同步**(立即返回结果)
+- **`sync-issue`/`review-pr`/`archive-issue` 异步**(立即回 200 + "queued",后台处理 — 因为 Slack 限制 3 秒响应,实际 module 调用可能 ~10s)。结果直接出现在 GitHub / Jira / Confluence,不再回 Slack。
+- **单 repo 守卫**:这个 Roster 实例只接管一个 repo,Slack 命令 repo 必须匹配,否则报错
+
 ### Undercover Mode(默认开启)
 
 虚拟员工对外永远是真人。两层保护:
