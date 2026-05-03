@@ -32,6 +32,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # workflow_dispatch fires on whatever branch you triggered from
+      # (typically main), so type=ref/semver/event=tag don't match the
+      # `inputs.ref` you actually want built. Pass the dispatched ref
+      # explicitly via a raw tag for the dispatch path.
+      # On a real "push tag" event the type=ref/semver entries below cover
+      # full + major.minor variants; the dispatch-only raw tag is a
+      # backfill aid that produces just <ref> + latest.
       - id: meta
         name: derive image tags
         uses: docker/metadata-action@v5
@@ -41,6 +48,7 @@ jobs:
             type=ref,event=tag
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=${{ inputs.ref }},enable=${{ github.event_name == 'workflow_dispatch' && startsWith(inputs.ref, 'v') }}
             type=raw,value=latest
 
       - name: build + push (linux/amd64, linux/arm64)
