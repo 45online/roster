@@ -16,7 +16,7 @@ GitHub  ←→  Roster (AI 员工)  ←→  Jira / Confluence / Slack
 
 ## 状态
 
-**已发布:[v0.1.5](https://github.com/45online/roster/releases/tag/v0.1.5)** —— design 文档规划的所有阶段都已实现:4 个业务模块端到端,Budget 双模阈值,Undercover 身份隔离,Polling + Webhook 双事件源,跨平台二进制 + 多架构 docker。
+**已发布:[v0.2.0](https://github.com/45online/roster/releases/tag/v0.2.0)** —— design 文档规划的所有阶段都已实现:4 个业务模块端到端,Budget 双模阈值,Undercover 身份隔离,Polling + Webhook 双事件源,跨平台二进制 + 多架构 docker。
 
 **下一阶段:dogfood**。功能填空到此为止,接下来在真 repo 上跑一周,看 prompt 调优 / 模块边界 / UX 痛点暴露什么真正的问题再做。完整 release 历史见 [CHANGELOG.md](CHANGELOG.md)。
 
@@ -86,9 +86,9 @@ make build
 **B. Docker**(零依赖)
 
 ```bash
-docker pull ghcr.io/45online/roster:v0.1.5   # 或 :latest
-docker run --rm ghcr.io/45online/roster:v0.1.5 --version
-# → roster v0.1.5
+docker pull ghcr.io/45online/roster:v0.2.0   # 或 :latest
+docker run --rm ghcr.io/45online/roster:v0.2.0 --version
+# → roster v0.2.0
 ```
 
 完整运行(挂载 `~/.roster` 持久化凭证 + 审计 + cursor;`-w /work` 让命令在挂载的 repo 中执行):
@@ -98,7 +98,7 @@ docker run --rm \
   -v "$HOME/.roster:/home/roster/.roster" \
   -v "$PWD:/work" -w /work \
   -e ROSTER_GITHUB_TOKEN -e ROSTER_JIRA_TOKEN -e ROSTER_JIRA_URL -e ROSTER_JIRA_EMAIL -e ANTHROPIC_API_KEY \
-  ghcr.io/45online/roster:v0.1.5 takeover --repo owner/name
+  ghcr.io/45online/roster:v0.2.0 takeover --repo owner/name
 ```
 
 支持 linux/amd64 和 linux/arm64,镜像 ~40 MB。
