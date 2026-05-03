@@ -17,7 +17,7 @@ ARG BUILD_DATE=unknown
 
 RUN CGO_ENABLED=0 go build \
     -trimpath \
-    -ldflags "-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=${BUILD_DATE}" \
+    -ldflags "-s -w -X github.com/45online/roster/internal/version.Version=${VERSION}" \
     -o /out/roster \
     ./cmd/roster
 

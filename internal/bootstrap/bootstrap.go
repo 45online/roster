@@ -18,11 +18,14 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/45online/roster/internal/version"
 )
 
-// appVersion is the canonical binary version string.
-// Overridden at link-time via -ldflags "-X bootstrap.appVersion=x.y.z".
-var appVersion = "0.1.0"
+// appVersion is read from the dedicated internal/version package so a
+// single ldflags target ('-X .../internal/version.Version=...') drives
+// both this banner and the TUI welcome string.
+var appVersion = version.Version
 
 // HandleFastPath inspects raw os.Args and handles zero-dependency flags
 // (--version, -v) before cobra is initialised.

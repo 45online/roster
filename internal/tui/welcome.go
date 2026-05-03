@@ -5,11 +5,13 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/45online/roster/internal/version"
 )
 
-// appVersion is the version string for the welcome banner.
-// This should be kept in sync with bootstrap.appVersion.
-const appVersion = "0.1.0"
+// appVersion comes from internal/version, which is the single ldflags
+// target for the binary's release version.
+var appVersion = version.Version
 
 // WelcomeHeader contains data for the startup welcome banner.
 type WelcomeHeader struct {
