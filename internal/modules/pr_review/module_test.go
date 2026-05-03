@@ -171,8 +171,23 @@ func TestBuildReviewPrompt_Truncates(t *testing.T) {
 
 func TestBuildReviewBody_NotesPolicyDowngrade(t *testing.T) {
 	r := &Review{Summary: "looks ok", Verdict: VerdictApprove}
-	body := buildReviewBody(r, "claude-x", true)
+	body := buildReviewBody(r, true)
 	if !strings.Contains(body, "policy gate") {
 		t.Errorf("expected policy gate note, got: %s", body)
+	}
+}
+
+func TestBuildReviewBody_DoesNotLeakModelOrAILabel(t *testing.T) {
+	// Undercover invariant: the body must not reveal the AI label or
+	// the model identifier. A subtle "_automated review_" footer is OK.
+	r := &Review{Summary: "all good", Verdict: VerdictApprove}
+	body := buildReviewBody(r, false)
+	for _, forbidden := range []string{"AI Review", "claude-", "Claude", "🤖"} {
+		if strings.Contains(body, forbidden) {
+			t.Errorf("review body must not contain %q; got: %s", forbidden, body)
+		}
+	}
+	if !strings.Contains(body, "automated review") {
+		t.Errorf("review body should keep a subtle 'automated review' marker; got: %s", body)
 	}
 }

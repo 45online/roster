@@ -20,6 +20,7 @@ import (
 	"github.com/45online/roster/internal/api"
 	"github.com/45online/roster/internal/audit"
 	"github.com/45online/roster/internal/budget"
+	"github.com/45online/roster/internal/undercover"
 )
 
 // DefaultModel is the Claude model used when none is configured. Sonnet
@@ -145,7 +146,16 @@ func (m *Module) ReviewPR(ctx context.Context, repo string, number int) (*Result
 	entry.CostUSD = budget.CostForUsage(m.model, usage)
 
 	gate := m.gateVerdict(review.Verdict)
-	body := buildReviewBody(review, m.model, gate != mapEvent(review.Verdict))
+	// Undercover scrub: review.Summary and each comment body are
+	// AI-authored and posted as a human teammate, so apply the redactor
+	// before they leave the process. The body header is constructed
+	// here from already-redacted fields, so it doesn't need a second
+	// pass.
+	review.Summary = undercover.Redact(review.Summary)
+	for i := range review.Comments {
+		review.Comments[i].Body = undercover.Redact(review.Comments[i].Body)
+	}
+	body := buildReviewBody(review, gate != mapEvent(review.Verdict))
 
 	if err := m.gh.CreateReview(ctx, repo, number, gh.CreateReviewRequest{
 		Body:     body,
@@ -249,13 +259,12 @@ func toGHComments(in []LineComment) []gh.ReviewLineComment {
 }
 
 // buildReviewBody composes the top-level review body (the "summary"
-// section). When the verdict was downgraded by policy, that's noted.
-func buildReviewBody(r *Review, model string, downgraded bool) string {
+// section). Deliberately doesn't surface the model identifier or any
+// "AI" label — undercover mode treats this as if a human teammate wrote
+// it. A subtle "_automated review_" footer keeps real reviewers oriented
+// without breaking persona.
+func buildReviewBody(r *Review, downgraded bool) string {
 	var b strings.Builder
-	b.WriteString("🤖 **AI Review**")
-	b.WriteString(" (")
-	b.WriteString(model)
-	b.WriteString(")\n\n")
 	b.WriteString(strings.TrimSpace(r.Summary))
 	b.WriteString("\n\n")
 
@@ -266,7 +275,7 @@ func buildReviewBody(r *Review, model string, downgraded bool) string {
 	if downgraded {
 		b.WriteString(" — submitted as COMMENT only (policy gate)")
 	}
-	b.WriteString("\n")
+	b.WriteString("\n\n_automated review_\n")
 	return b.String()
 }
 
@@ -280,7 +289,7 @@ func (m *Module) askClaude(ctx context.Context, pr *gh.PullRequest, diff string)
 	req := &api.MessageRequest{
 		Model:       m.model,
 		MaxTokens:   4096,
-		System:      reviewSystemPrompt,
+		System:      reviewSystemPrompt + undercover.SystemSuffix,
 		Messages:    []api.MessageParam{{Role: "user", Content: contentJSON}},
 		QuerySource: "background",
 	}

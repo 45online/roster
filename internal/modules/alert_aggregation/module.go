@@ -22,6 +22,7 @@ import (
 	gh "github.com/45online/roster/internal/adapters/github"
 	"github.com/45online/roster/internal/adapters/slack"
 	"github.com/45online/roster/internal/audit"
+	"github.com/45online/roster/internal/undercover"
 )
 
 // Config configures Module D per project.
@@ -133,7 +134,12 @@ func (m *Module) Aggregate(ctx context.Context, repo string, alert Alert) (*Resu
 
 	commits, pulls = trimToMax(commits, pulls, m.cfg.MaxItems)
 
-	text := FormatMessage(repo, alert, commits, pulls, alert.FiredAt)
+	// Module D doesn't call Claude, but the rendered text quotes commit
+	// messages and PR titles verbatim — both can carry secret-shaped or
+	// vendor-name strings. Run the redactor as a final pass so the
+	// Slack channel never carries leaked tokens or "AI Review" residue
+	// from earlier Module B output that ended up in a commit.
+	text := undercover.Redact(FormatMessage(repo, alert, commits, pulls, alert.FiredAt))
 
 	resp, err := m.slack.PostMessage(ctx, slack.PostMessageRequest{
 		Channel: m.cfg.SlackChannel,

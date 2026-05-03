@@ -21,6 +21,7 @@ import (
 	"github.com/45online/roster/internal/api"
 	"github.com/45online/roster/internal/audit"
 	"github.com/45online/roster/internal/budget"
+	"github.com/45online/roster/internal/undercover"
 )
 
 // DefaultModel is Sonnet — Module C produces longer-form prose than
@@ -124,6 +125,13 @@ func (m *Module) ArchiveIssue(ctx context.Context, repo string, number int) (*Re
 	entry.CacheReadTokens = usage.CacheReadInputTokens
 	entry.CostUSD = budget.CostForUsage(m.model, usage)
 
+	// Undercover scrub on every AI-authored field before it gets baked
+	// into the Confluence page body. Title and the four prose sections
+	// all flow into renderStorage's HTML.
+	doc.Title = undercover.Redact(doc.Title)
+	doc.Summary = undercover.Redact(doc.Summary)
+	doc.Decision = undercover.Redact(doc.Decision)
+	doc.Details = undercover.Redact(doc.Details)
 	page, err := m.confluence.CreateDraft(ctx, confluence.CreateDraftRequest{
 		SpaceID:     m.cfg.SpaceID,
 		ParentID:    m.cfg.ParentPageID,
@@ -187,7 +195,7 @@ func (m *Module) askClaude(ctx context.Context, repo string, issue *gh.Issue, co
 	req := &api.MessageRequest{
 		Model:       m.model,
 		MaxTokens:   4096,
-		System:      summarizeSystemPrompt,
+		System:      summarizeSystemPrompt + undercover.SystemSuffix,
 		Messages:    []api.MessageParam{{Role: "user", Content: contentJSON}},
 		QuerySource: "background",
 	}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/45online/roster/internal/adapters/github"
 	"github.com/45online/roster/internal/api"
+	"github.com/45online/roster/internal/undercover"
 )
 
 // DefaultExtractorModel is the model used if NewExtractor is given an
@@ -61,7 +62,7 @@ func (e *Extractor) Extract(ctx context.Context, issue *github.Issue) (*Extracte
 	req := &api.MessageRequest{
 		Model:     e.model,
 		MaxTokens: 1024,
-		System:    extractorSystemPrompt,
+		System:    extractorSystemPrompt + undercover.SystemSuffix,
 		Messages: []api.MessageParam{
 			{Role: "user", Content: contentJSON},
 		},

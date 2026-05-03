@@ -15,6 +15,7 @@ import (
 	"github.com/45online/roster/internal/api"
 	"github.com/45online/roster/internal/audit"
 	"github.com/45online/roster/internal/budget"
+	"github.com/45online/roster/internal/undercover"
 )
 
 // Config holds Module A's per-project configuration.
@@ -100,10 +101,13 @@ func (m *Module) SyncIssue(ctx context.Context, repo string, number int) (*Resul
 		fillTokens(&entry, m.extractor.model, usage)
 	}
 
+	// Undercover scrub: anything user-visible from here on is treated as
+	// if a human teammate wrote it. Catches AI-disclaimer slip-ups and
+	// any model/vendor strings that snuck through the prompt.
 	createReq := jira.CreateIssueRequest{
 		Project:     m.cfg.JiraProject,
-		Summary:     summary,
-		Description: buildDescription(issue, repo, component),
+		Summary:     undercover.Redact(summary),
+		Description: undercover.Redact(buildDescription(issue, repo, component)),
 		IssueType:   issueType,
 		Priority:    priority,
 	}
