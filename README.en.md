@@ -117,6 +117,22 @@ Multi-arch (linux/amd64, linux/arm64), final image ~40 MB.
 brew install 45online/tap/roster
 ```
 
+**D. Helm chart (Kubernetes)**
+
+```bash
+# Create credentials Secret (recommended for prod; lab use can inline values)
+kubectl create secret generic roster-creds \
+  --from-literal=ROSTER_GITHUB_TOKEN=ghp_xxx \
+  --from-literal=ROSTER_LLM_API_KEY=sk-...
+
+# Install
+helm install roster ./charts/roster \
+  --set repo=owner/name \
+  --set credentials.existingSecret=roster-creds
+```
+
+Full guide: [charts/roster/README.md](charts/roster/README.md) — covers webhook + Ingress + TLS, persistence, production knobs. **Single-pod by design** (cursor can't be concurrent); install N releases to manage N repos.
+
 ---
 
 ## Configuration

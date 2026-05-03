@@ -1,0 +1,42 @@
+{{- if and .Values.webhook.enabled .Values.webhook.ingress.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "roster.fullname" . }}
+  labels: {{- include "roster.labels" . | nindent 4 }}
+  {{- with .Values.webhook.ingress.annotations }}
+  annotations: {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.webhook.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- if .Values.webhook.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.webhook.ingress.host | quote }}
+      {{- with .Values.webhook.ingress.tls.secretName }}
+      secretName: {{ . }}
+      {{- end }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.webhook.ingress.host | quote }}
+      http:
+        paths:
+          # Webhook delivery endpoint (POST from GitHub).
+          - path: {{ .Values.webhook.ingress.path | default "/webhook/github" }}
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: {{ include "roster.fullname" . }}
+                port:
+                  number: {{ .Values.webhook.port }}
+          # /healthz is also exposed (handy for external uptime checks).
+          - path: /healthz
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: {{ include "roster.fullname" . }}
+                port:
+                  number: {{ .Values.webhook.port }}
+{{- end -}}

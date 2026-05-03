@@ -1,0 +1,125 @@
+# ─── Image ───────────────────────────────────────────────────────────────
+image:
+  repository: ghcr.io/45online/roster
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+# ─── Required: which repo this Roster pod manages ────────────────────────
+# A single pod covers a single repository. To manage N repos, install N
+# releases (helm install roster-foo ... --set repo=foo/bar).
+repo: ""   # e.g. "owner/name" — REQUIRED
+
+# ─── Credentials ────────────────────────────────────────────────────────
+# Two ways to provide credentials:
+#   (a) point at an existing Kubernetes Secret you manage out-of-band:
+#         credentials.existingSecret: my-roster-creds
+#       The Secret should expose env-shaped keys:
+#         ROSTER_GITHUB_TOKEN
+#         ROSTER_JIRA_URL, ROSTER_JIRA_EMAIL, ROSTER_JIRA_TOKEN
+#         ROSTER_LLM_PROVIDER, ROSTER_LLM_BASE_URL, ROSTER_LLM_MODEL
+#         ROSTER_LLM_API_KEY
+#         ROSTER_SLACK_TOKEN          (optional)
+#         ROSTER_WEBHOOK_SECRET       (only if webhook.enabled)
+#
+#   (b) inline below — a Secret will be created from these values.
+#       Useful for kicking the tyres; in production prefer (a) so values
+#       don't end up in helm release history.
+credentials:
+  existingSecret: ""
+  github_token: ""
+  jira_url: ""
+  jira_email: ""
+  jira_token: ""
+  llm_provider: ""    # "anthropic" | "openai-compatible"
+  llm_base_url: ""    # required when llm_provider=openai-compatible
+  llm_model: ""       # required when llm_provider=openai-compatible
+  llm_api_key: ""
+  slack_token: ""     # optional (only Modules C, D need it)
+  webhook_secret: ""  # required iff webhook.enabled
+
+# ─── Project config (.roster/config.yml) ─────────────────────────────────
+# Mounted into the pod as a ConfigMap and passed via --config to roster.
+# A blank string here uses Roster's built-in defaults.
+config:
+  yaml: |
+    # Minimal defaults; replace with `roster init`-generated content.
+    modules:
+      issue_to_jira:
+        enabled: true
+        jira_project: ""        # set me!
+        default_issue_type: Task
+      pr_review:
+        enabled: false
+      issue_to_confluence:
+        enabled: false
+      alert_aggregation:
+        enabled: false
+    budget:
+      monthly_usd: 50
+      on_exceed: downgrade
+
+# ─── Persistent state (~/.roster — creds / cursor / audit) ──────────────
+# Roster keeps audit JSONL, polling cursors, and (if you used `roster
+# login` from inside the pod) credentials at $HOME/.roster. Persistence
+# matters for cursor continuity across restarts.
+persistence:
+  enabled: true
+  size: 1Gi
+  storageClass: ""        # empty → cluster default
+  accessMode: ReadWriteOnce
+
+# ─── Polling vs Webhook ─────────────────────────────────────────────────
+webhook:
+  enabled: false
+  port: 8080
+  service:
+    type: ClusterIP
+    annotations: {}
+  ingress:
+    enabled: false
+    className: ""         # e.g. "nginx"
+    annotations: {}
+    host: roster.example.com
+    path: /webhook/github
+    tls:
+      enabled: true
+      secretName: ""      # empty → let cert-manager create one if you've annotated for it
+
+# ─── Pod plumbing ───────────────────────────────────────────────────────
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+securityContext:
+  readOnlyRootFilesystem: false   # roster writes to /home/roster/.roster
+  allowPrivilegeEscalation: false
+  runAsNonRoot: true
+  capabilities:
+    drop: [ALL]
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Override the takeover poll cadence (default 30s)
+pollInterval: 30s

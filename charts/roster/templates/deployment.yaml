@@ -1,0 +1,108 @@
+{{- if not .Values.repo -}}
+{{- fail "values.repo is required (e.g. 'owner/name')" -}}
+{{- end -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "roster.fullname" . }}
+  labels: {{- include "roster.labels" . | nindent 4 }}
+spec:
+  # Roster's poller and webhook receiver both maintain per-repo cursors;
+  # running >1 replica would split-brain the cursor file. Keep this 1.
+  replicas: 1
+  strategy:
+    # Recreate so the PVC isn't held by an old pod while a new one boots.
+    type: Recreate
+  selector:
+    matchLabels: {{- include "roster.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "roster.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        # Roll the pod when config changes.
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- if not .Values.credentials.existingSecret }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- end }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "roster.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: roster
+          image: {{ include "roster.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          args:
+            - takeover
+            - --repo
+            - {{ .Values.repo | quote }}
+            - --config
+            - /etc/roster/config.yml
+            - --interval
+            - {{ .Values.pollInterval | quote }}
+          envFrom:
+            - secretRef:
+                name: {{ include "roster.secretName" . }}
+          {{- if .Values.webhook.enabled }}
+          ports:
+            - name: webhook
+              containerPort: {{ .Values.webhook.port }}
+              protocol: TCP
+          # Roster's webhook server has /healthz; reuse it for both
+          # readiness and liveness probes when webhook mode is on.
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: webhook
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: webhook
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          {{- end }}
+          volumeMounts:
+            - name: state
+              mountPath: /home/roster/.roster
+            - name: config
+              mountPath: /etc/roster
+              readOnly: true
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "roster.fullname" . }}-config
+            items:
+              - key: config.yml
+                path: config.yml
+        - name: state
+        {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "roster.fullname" . }}-state
+        {{- else }}
+          emptyDir: {}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity: {{- toYaml . | nindent 8 }}
+      {{- end }}

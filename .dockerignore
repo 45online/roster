@@ -22,6 +22,7 @@ coverage.html
 
 # Docs that don't affect the build.
 docs/
+charts/
 README.md
 README.*.md
 CHANGELOG.md

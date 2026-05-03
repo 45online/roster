@@ -1,0 +1,40 @@
+apiVersion: v2
+name: roster
+description: |
+  Roster — give your team an AI employee. Long-running daemon that takes
+  over a "virtual employee" GitHub account and runs project-management
+  workflows: Issue → Jira sync, PR AI Review, Issue close → Confluence
+  draft, alert aggregation → Slack. Pluggable LLM provider (Anthropic
+  Claude / DeepSeek / Gemini / OpenAI / xAI / any OpenAI-compatible
+  endpoint).
+
+type: application
+
+# version is the chart's own version, bumped independently of appVersion.
+version: 0.1.0
+
+# appVersion tracks the Roster binary this chart targets. Bump alongside
+# Roster releases.
+appVersion: "0.2.0"
+
+home: https://github.com/45online/roster
+sources:
+  - https://github.com/45online/roster
+
+keywords:
+  - roster
+  - github
+  - jira
+  - confluence
+  - slack
+  - ai
+  - claude
+  - deepseek
+  - llm
+  - automation
+
+maintainers:
+  - name: Roster contributors
+    url: https://github.com/45online/roster
+
+icon: https://raw.githubusercontent.com/45online/roster/main/charts/roster/icon.png

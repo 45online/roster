@@ -110,6 +110,22 @@ docker run --rm \
 brew install 45online/tap/roster
 ```
 
+**D. Helm chart(Kubernetes)**
+
+```bash
+# 创建凭证 Secret(生产环境推荐;实验室也可以直接 inline values)
+kubectl create secret generic roster-creds \
+  --from-literal=ROSTER_GITHUB_TOKEN=ghp_xxx \
+  --from-literal=ROSTER_LLM_API_KEY=sk-...
+
+# 安装
+helm install roster ./charts/roster \
+  --set repo=owner/name \
+  --set credentials.existingSecret=roster-creds
+```
+
+完整说明:[charts/roster/README.md](charts/roster/README.md) — 含 webhook + Ingress + TLS、persistence、production 部署建议。**单 Pod 设计**(cursor 不能并发);要管 N 个 repo 就装 N 个 release。
+
 ### 试用 Module A(已可用)
 
 凭证两种方式任选其一(env vars 优先,文件 fallback):

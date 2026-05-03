@@ -1,0 +1,48 @@
+Roster v{{ .Chart.AppVersion }} deployed as {{ .Release.Name }} in {{ .Release.Namespace }}.
+
+It manages the GitHub repository: {{ .Values.repo | quote }}
+
+Quick checks:
+
+1. Watch the daemon come up:
+
+   kubectl -n {{ .Release.Namespace }} logs deployment/{{ include "roster.fullname" . }} -f
+
+   You should see:
+     ✓ Loaded config from /etc/roster/config.yml
+     ✓ Authenticated as @<your-virtual-employee>
+     ✓ AI extractor enabled (provider=...)
+     [poller] {{ .Values.repo }}: starting (interval={{ .Values.pollInterval }}, ...)
+
+2. Inspect the dashboard inside the pod:
+
+   kubectl -n {{ .Release.Namespace }} exec deployment/{{ include "roster.fullname" . }} -- roster status
+
+3. Tail the audit log:
+
+   kubectl -n {{ .Release.Namespace }} exec deployment/{{ include "roster.fullname" . }} -- roster logs {{ .Values.repo }} -f
+
+{{ if .Values.webhook.enabled }}
+Webhook mode is ON, listening on port {{ .Values.webhook.port }}.
+
+{{ if .Values.webhook.ingress.enabled }}
+Configure GitHub webhook (repo Settings → Webhooks → Add webhook):
+  Payload URL : https://{{ .Values.webhook.ingress.host }}{{ .Values.webhook.ingress.path | default "/webhook/github" }}
+  Content type: application/json
+  Secret      : (the value from your ROSTER_WEBHOOK_SECRET)
+  Events      : Issues + Pull requests
+{{ else }}
+The webhook Service is ClusterIP-only — expose it via your own ingress
+or LoadBalancer Service before pointing GitHub at it.
+{{ end }}
+{{ else }}
+Polling mode is ON. To switch to webhook (saves GitHub API quota,
+delivers events in seconds), set webhook.enabled=true in values.yaml.
+{{ end }}
+
+{{ if not .Values.credentials.existingSecret }}
+⚠ Credentials are stored in a chart-managed Secret. For production,
+prefer credentials.existingSecret pointing at a Secret managed by
+Sealed Secrets / External Secrets / SOPS / etc. so values don't end
+up in helm release history.
+{{ end }}
