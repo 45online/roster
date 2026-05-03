@@ -16,7 +16,7 @@ GitHub  ←→  Roster (AI 员工)  ←→  Jira / Confluence / Slack
 
 ## 状态
 
-**已发布:[v0.1.3](https://github.com/45online/roster/releases/tag/v0.1.3)** —— 4 个业务模块全部端到端可用,有 budget 跟踪 + 阈值告警,有跨平台二进制 + 多架构 docker 镜像。还在 alpha 阶段,等待真实场景的反馈。
+**已发布:[v0.1.4](https://github.com/45online/roster/releases/tag/v0.1.4)** —— 4 个业务模块全部端到端可用,有 budget 跟踪 + 阈值告警,有跨平台二进制 + 多架构 docker 镜像。还在 alpha 阶段,等待真实场景的反馈。
 
 | 阶段 | 状态 |
 |---|---|
@@ -82,9 +82,9 @@ make build
 **B. Docker**(零依赖)
 
 ```bash
-docker pull ghcr.io/45online/roster:v0.1.3   # 或 :latest
-docker run --rm ghcr.io/45online/roster:v0.1.3 --version
-# → roster v0.1.3
+docker pull ghcr.io/45online/roster:v0.1.4   # 或 :latest
+docker run --rm ghcr.io/45online/roster:v0.1.4 --version
+# → roster v0.1.4
 ```
 
 完整运行(挂载 `~/.roster` 持久化凭证 + 审计 + cursor;`-w /work` 让命令在挂载的 repo 中执行):
@@ -94,7 +94,7 @@ docker run --rm \
   -v "$HOME/.roster:/home/roster/.roster" \
   -v "$PWD:/work" -w /work \
   -e ROSTER_GITHUB_TOKEN -e ROSTER_JIRA_TOKEN -e ROSTER_JIRA_URL -e ROSTER_JIRA_EMAIL -e ANTHROPIC_API_KEY \
-  ghcr.io/45online/roster:v0.1.3 takeover --repo owner/name
+  ghcr.io/45online/roster:v0.1.4 takeover --repo owner/name
 ```
 
 支持 linux/amd64 和 linux/arm64,镜像 ~40 MB。
