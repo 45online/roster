@@ -31,7 +31,7 @@ func HandleFastPath(args []string) bool {
 	for _, arg := range args[1:] {
 		switch arg {
 		case "--version", "-v":
-			fmt.Printf("claude %s\n", appVersion)
+			fmt.Printf("roster %s\n", appVersion)
 			return true
 		case "--":
 			// End of flags — stop scanning.

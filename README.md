@@ -82,18 +82,24 @@ make build
 ```
 
 **B. Docker**(零依赖)
-```bash
-docker pull ghcr.io/45online/roster:latest    # release 后可用
-# 本地构建:
-docker build -t roster .
 
-# 运行(挂载 ~/.roster 用于持久化凭证 + 审计 + cursor;-w 是当前 repo)
+```bash
+docker pull ghcr.io/45online/roster:v0.1.0   # 或 :latest
+docker run --rm ghcr.io/45online/roster:v0.1.0 --version
+# → roster 0.1.0
+```
+
+完整运行(挂载 `~/.roster` 持久化凭证 + 审计 + cursor;`-w /work` 让命令在挂载的 repo 中执行):
+
+```bash
 docker run --rm \
   -v "$HOME/.roster:/home/roster/.roster" \
   -v "$PWD:/work" -w /work \
   -e ROSTER_GITHUB_TOKEN -e ROSTER_JIRA_TOKEN -e ROSTER_JIRA_URL -e ROSTER_JIRA_EMAIL -e ANTHROPIC_API_KEY \
-  roster takeover --repo owner/name
+  ghcr.io/45online/roster:v0.1.0 takeover --repo owner/name
 ```
+
+支持 linux/amd64 和 linux/arm64,镜像 ~40 MB。
 
 **C. Homebrew**(release 后可用)
 ```bash
