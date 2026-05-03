@@ -1,5 +1,7 @@
 # Roster
 
+[English](README.en.md) · **中文**
+
 > 给团队加一个 AI 员工。
 
 Roster 是一个本地 / VPS 长驻的 CLI 工具,它让 AI 以"虚拟真人员工"的身份接管你的研发管理流:GitHub 上发生的事,自动同步到 Jira / Confluence / Slack,无需人工搬运。
