@@ -4,6 +4,8 @@
 
 > Suma un empleado IA a tu equipo.
 
+> 📐 Principios de diseño / método de trabajo / postura contracorriente: [PRINCIPLES.md](PRINCIPLES.md) — lectura obligatoria para contribuidores y colaboradores IA antes de diseñar nuevas funciones.
+
 Roster es un CLI de larga ejecución (caja local o VPS) que deja a una IA tomar el control de una cuenta de GitHub "empleado virtual" y operar el flujo de gestión del proyecto: lo que sucede en GitHub se sincroniza con Jira / Confluence / Slack, sin que un humano tenga que mover tickets entre sistemas.
 
 Los desarrolladores se quedan en GitHub. La gestión vive en la trastienda. La IA hace de puente.

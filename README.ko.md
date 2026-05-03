@@ -4,6 +4,8 @@
 
 > 팀에 AI 직원을 한 명 추가합니다.
 
+> 📐 설계 원칙 / 작업 방법 / 반-합의(counter-consensus) 입장: [PRINCIPLES.md](PRINCIPLES.md) — 기여자와 AI 협업자가 새 기능을 설계하기 전 필독.
+
 Roster는 로컬 / VPS에서 상시 동작하는 CLI 도구로, "가상 직원" GitHub 계정을 AI에게 맡겨 프로젝트 관리 워크플로우를 자동으로 처리합니다. GitHub에서 발생한 일은 Jira / Confluence / Slack으로 동기화되어, 사람이 시스템 사이로 티켓을 옮길 필요가 없어집니다.
 
 개발자는 GitHub에만 머문다. 관리는 백오피스에 있다. AI가 다리를 놓는다.

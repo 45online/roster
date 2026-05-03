@@ -45,6 +45,7 @@ archives:
       - README.ko.md
       - README.es.md
       - CHANGELOG.md
+      - PRINCIPLES.md
       - LICENSE
       - LICENSE.upstream
       - NOTICE

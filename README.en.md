@@ -4,6 +4,8 @@
 
 > Add an AI employee to your team.
 
+> 📐 Design principles / working method / counter-consensus stance: [PRINCIPLES.md](PRINCIPLES.md) — required reading for contributors and AI collaborators before designing new features.
+
 Roster is a long-running CLI (local box or VPS) that lets an AI take
 over a "virtual employee" GitHub account and run your project
 management workflow: events on GitHub get synced to Jira / Confluence /
