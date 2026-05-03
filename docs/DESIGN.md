@@ -391,7 +391,7 @@ dry_run: false
 
 ## 16. 项目结构(实际)
 
-Fork 自 roster,加上 Roster 业务层:
+Fork 自 claude-code-go,加上 Roster 业务层:
 
 ```
 roster/
@@ -438,8 +438,7 @@ roster/
 │   ├── utils/                        # 继承:env/fs/ids/jsonutil/permission
 │   └── testutil/                     # 继承
 ├── docs/
-│   ├── ROADMAP.md                    # 继承(roster 自身的 roadmap,后续替换)
-│   └── ...
+│   └── DESIGN.md                    # 本文件(原 README;splitting 时移到这里)
 ├── test/
 │   └── integration/
 ├── .references/                      # 仅本地参考,不入 git
