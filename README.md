@@ -64,8 +64,6 @@ GitHub  ←→  Roster (AI 员工)  ←→  Jira / Confluence / Slack
 
 ## 快速开始
 
-⚠️ 目前还没有可用的 release。需要从源码构建。
-
 ### 前置要求
 - 一个虚拟员工身份的 GitHub 账户(配 PAT)
 - Claude API key
