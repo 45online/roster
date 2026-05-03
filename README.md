@@ -36,7 +36,7 @@ GitHub  ←→  Roster (AI 员工)  ←→  Jira / Confluence / Slack
 | 8. 容器化 + CI(Dockerfile + Actions + GHCR) | ✅ |
 | 7. Undercover Mode(身份隔离 + 秘密 redact) | ✅ |
 | 6.c+ Budget downgrade 模式(关 AI 不停 daemon) | ✅ |
-| 6.d Webhook 模式 + GitHub HMAC 校验 | ⏳ |
+| 6.d Webhook 模式 + GitHub HMAC 校验 | ✅ |
 
 ---
 
@@ -305,6 +305,40 @@ Projects (1, last 24h):
    downgrade 状态会随每次 budget check 自动恢复 —— 例如月份滚动后 MTD 归零,模块自动恢复。
 
 读 audit 失败时**fail open**(不阻塞业务),避免成为新的故障点。
+
+### Webhook 模式(替代 polling)
+
+默认 `roster takeover` 走 30s polling。需要更低延迟 + 不耗 GitHub API 配额时,在 `.roster/config.yml` 启用 webhook:
+
+```yaml
+webhook:
+  enabled: true
+  listen: ":8080"
+  path: /webhook/github
+  secret: ""                 # 或 export ROSTER_WEBHOOK_SECRET=...
+```
+
+启动后输出:
+```
+✓ Webhook mode (poller disabled); GitHub repo Settings → Webhooks must point at <public-url>/webhook/github
+```
+
+GitHub 配置(repo Settings → Webhooks):
+1. 用 ngrok / Cloudflare Tunnel / 公网 VPS 把 `:8080` 暴露成 https URL
+2. Payload URL = `<public URL>/webhook/github`
+3. Content type = `application/json`
+4. Secret = 同 `ROSTER_WEBHOOK_SECRET`(或 `webhook.secret`)
+5. 勾 "Issues" 和 "Pull requests"(其它不需要)
+
+特性:
+- **HMAC-SHA256 签名验证**(constant-time),签名不对直接 401
+- **事件映射**:`issues` → `IssuesEvent` / `pull_request` → `PullRequestEvent`(其它 200 ignored,GitHub 不重试)
+- **`ping` 事件自动回 pong**(GitHub UI 设置时显示绿色 ✓)
+- **Anti-loop**:虚拟员工自己发的 webhook 同样 drop
+- **`/healthz`** 端点:供 LB / tunnel 健康检查
+- **请求体上限 5 MB**:防 OOM
+
+⚠️ Webhook 与 polling **互斥** —— 启用 webhook 后 poller 不跑(避免双重处理:两者 event ID 来源不同,无法 dedupe)。
 
 ### Undercover Mode(默认开启)
 

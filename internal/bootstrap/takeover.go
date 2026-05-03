@@ -25,6 +25,7 @@ import (
 	"github.com/45online/roster/internal/modules/pr_review"
 	"github.com/45online/roster/internal/poller"
 	"github.com/45online/roster/internal/projcfg"
+	"github.com/45online/roster/internal/webhookreceiver"
 )
 
 // newTakeoverCmd builds `roster takeover`: foreground-running poller
@@ -313,6 +314,37 @@ Credentials (env vars):
 					return nil
 				}
 				return nil
+			}
+
+			// Two event sources, mutually exclusive: webhook receiver OR
+			// poller. Webhook is push (low-latency, no API quota cost,
+			// needs a public endpoint); poller is pull (works anywhere,
+			// 30s lag).
+			if cfg.Webhook.Enabled {
+				secret := cfg.Webhook.Secret
+				if secret == "" {
+					secret = os.Getenv("ROSTER_WEBHOOK_SECRET")
+				}
+				if secret == "" {
+					return fmt.Errorf("webhook.enabled=true but no secret (set webhook.secret in config or ROSTER_WEBHOOK_SECRET in env)")
+				}
+				srv, err := webhookreceiver.NewServer(webhookreceiver.Config{
+					Listen:    cfg.Webhook.Listen,
+					Path:      cfg.Webhook.Path,
+					Secret:    secret,
+					SelfLogin: selfLogin,
+					Handler:   handler,
+				})
+				if err != nil {
+					return err
+				}
+				fmt.Printf("✓ Webhook mode (poller disabled); GitHub repo Settings → Webhooks must point at <public-url>%s\n",
+					orDefault(cfg.Webhook.Path, "/webhook/github"))
+				err = srv.Run(ctx)
+				if errors.Is(err, context.Canceled) {
+					return nil
+				}
+				return err
 			}
 
 			p, err := poller.New(poller.Config{

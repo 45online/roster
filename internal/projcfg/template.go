@@ -53,5 +53,17 @@ budget:
   monthly_usd: 50            # USD spent on Claude API per month for this repo
   on_exceed: downgrade       # 'downgrade' (skip AI) | 'stop' (halt all modules)
 
+# Optional: receive GitHub webhooks instead of polling. When enabled,
+# takeover starts an HTTP server on 'listen' and skips the poller. You
+# also need a public endpoint (VPS port-forward, ngrok, Cloudflare
+# Tunnel, etc.) and a configured webhook on the GitHub repo
+# (Settings → Webhooks) pointing at <public URL>/webhook/github with
+# the same 'secret' below and content-type application/json.
+webhook:
+  enabled: false
+  listen: ":8080"
+  path: /webhook/github
+  secret: ""                 # or set ROSTER_WEBHOOK_SECRET in env
+
 dry_run: false               # true = log what would happen but don't write
 `

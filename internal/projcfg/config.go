@@ -18,7 +18,20 @@ type Config struct {
 	Identity    string  `yaml:"identity"`
 	Modules     Modules `yaml:"modules"`
 	Budget      Budget  `yaml:"budget"`
+	Webhook     Webhook `yaml:"webhook"`
 	DryRun      bool    `yaml:"dry_run"`
+}
+
+// Webhook configures the embedded GitHub webhook receiver. When enabled,
+// takeover replaces polling with HTTP push.
+type Webhook struct {
+	Enabled bool   `yaml:"enabled"`
+	Listen  string `yaml:"listen"` // e.g. ":8080" or "127.0.0.1:9090". Default ":8080".
+	Path    string `yaml:"path"`   // default "/webhook/github"
+	// Secret is the HMAC shared secret you set on the GitHub repo's
+	// webhook. Empty here is allowed only if env ROSTER_WEBHOOK_SECRET
+	// is set; takeover refuses to start without one.
+	Secret string `yaml:"secret"`
 }
 
 // Modules toggles and configures each Roster module.
