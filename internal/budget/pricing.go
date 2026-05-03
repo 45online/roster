@@ -27,11 +27,36 @@ type Price struct {
 // pricesByModel maps a model identifier (or substring prefix) to its Price.
 // Keys are matched longest-first by ModelPrice; this lets dated variants
 // like "claude-haiku-4-5-20251001" fall back to the family rate.
+//
+// Prices are USD per million tokens, last refreshed early 2026. Cache
+// rates default to InputUSD * 1.25 / 0.10 if zero (Anthropic-style).
+// For OpenAI-compatible providers without a cache concept, we leave the
+// derived fields at the same fallback — the rate is academic when no
+// cache tokens are reported.
 var pricesByModel = map[string]Price{
-	// Claude 4.x family (USD per million tokens).
+	// ── Anthropic (Claude 4.x family) ────────────────────────────
 	"claude-opus-4":   {InputUSD: 15.00, OutputUSD: 75.00},
 	"claude-sonnet-4": {InputUSD: 3.00, OutputUSD: 15.00},
 	"claude-haiku-4":  {InputUSD: 1.00, OutputUSD: 5.00},
+
+	// ── OpenAI ────────────────────────────────────────────────────
+	"gpt-4o-mini": {InputUSD: 0.15, OutputUSD: 0.60},
+	"gpt-4o":      {InputUSD: 2.50, OutputUSD: 10.00},
+	"gpt-4.1-mini": {InputUSD: 0.40, OutputUSD: 1.60},
+	"gpt-4.1":     {InputUSD: 2.00, OutputUSD: 8.00},
+
+	// ── DeepSeek (cheapest among capable open models) ────────────
+	"deepseek-chat":     {InputUSD: 0.27, OutputUSD: 1.10},
+	"deepseek-reasoner": {InputUSD: 0.55, OutputUSD: 2.19},
+
+	// ── Google Gemini (OpenAI-compat endpoint) ───────────────────
+	"gemini-2.5-flash": {InputUSD: 0.075, OutputUSD: 0.30},
+	"gemini-2.0-flash": {InputUSD: 0.10, OutputUSD: 0.40},
+	"gemini-2.5-pro":   {InputUSD: 1.25, OutputUSD: 10.00},
+
+	// ── xAI Grok ─────────────────────────────────────────────────
+	"grok-3": {InputUSD: 2.00, OutputUSD: 10.00},
+	"grok-2": {InputUSD: 2.00, OutputUSD: 10.00},
 }
 
 // ModelPrice returns the Price entry for a model name, with caching rates

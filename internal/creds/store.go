@@ -21,7 +21,12 @@ type Store struct {
 	GitHub *GitHubCreds `json:"github,omitempty"`
 	Jira   *JiraCreds   `json:"jira,omitempty"`
 	Slack  *SlackCreds  `json:"slack,omitempty"`
+	// Claude is the legacy single-provider record. Still honored for
+	// backward compatibility when LLM is unset.
 	Claude *ClaudeCreds `json:"claude,omitempty"`
+	// LLM is the generic multi-provider record (Anthropic / OpenAI-
+	// compatible endpoints — DeepSeek, xAI, Gemini OpenAI-compat, etc.).
+	LLM *LLMCreds `json:"llm,omitempty"`
 }
 
 // GitHubCreds is the GitHub PAT for the virtual employee account.
@@ -41,8 +46,30 @@ type SlackCreds struct {
 	Token string `json:"token"`
 }
 
-// ClaudeCreds is the Anthropic API key (or compatible provider key).
+// ClaudeCreds is the Anthropic API key (legacy, single-provider).
+// Prefer LLMCreds for new setups — it covers Claude as one of several
+// providers, plus any OpenAI-compatible endpoint.
 type ClaudeCreds struct {
+	APIKey string `json:"api_key"`
+}
+
+// LLMCreds is the generic record covering both Anthropic Claude and any
+// OpenAI Chat Completions-compatible endpoint (DeepSeek, xAI, Gemini
+// OpenAI-compat, Together, Groq, ...). Provider determines which client
+// adapter Roster constructs.
+type LLMCreds struct {
+	// Provider is "anthropic" or "openai-compatible".
+	Provider string `json:"provider"`
+	// BaseURL is required for openai-compatible providers (their API
+	// endpoint root, e.g. "https://api.deepseek.com"). Empty for the
+	// anthropic default endpoint.
+	BaseURL string `json:"base_url,omitempty"`
+	// Model is the default model id for this credential set
+	// (e.g. "deepseek-chat", "gpt-4o-mini", "claude-haiku-4-5-20251001").
+	// Each module may override per-call, but having a sensible default
+	// here saves repetition.
+	Model string `json:"model,omitempty"`
+	// APIKey is the bearer token / API key for the provider.
 	APIKey string `json:"api_key"`
 }
 
@@ -106,6 +133,8 @@ func (s *Store) Has(provider string) bool {
 		return s.Slack != nil && s.Slack.Token != ""
 	case "claude":
 		return s.Claude != nil && s.Claude.APIKey != ""
+	case "llm":
+		return s.LLM != nil && s.LLM.APIKey != "" && s.LLM.Provider != ""
 	}
 	return false
 }
@@ -121,6 +150,8 @@ func (s *Store) Clear(provider string) {
 		s.Slack = nil
 	case "claude":
 		s.Claude = nil
+	case "llm":
+		s.LLM = nil
 	}
 }
 

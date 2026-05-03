@@ -8,9 +8,9 @@ import (
 	"github.com/spf13/cobra"
 
 	gh "github.com/45online/roster/internal/adapters/github"
-	"github.com/45online/roster/internal/api"
 	"github.com/45online/roster/internal/audit"
 	"github.com/45online/roster/internal/modules/pr_review"
+	"github.com/45online/roster/internal/projcfg"
 )
 
 // newReviewPRCmd builds `roster review-pr`: Module B's manual one-shot.
@@ -45,22 +45,19 @@ ANTHROPIC_API_KEY (or 'roster login claude') is REQUIRED for Module B.
 			if err != nil {
 				return err
 			}
-			claudeKey := r.claude()
-			if claudeKey == "" {
-				return fmt.Errorf("Claude API key required for Module B (set ANTHROPIC_API_KEY or run 'roster login claude')")
+			llmCfg, ok := r.llm(projcfg.LLM{})
+			if !ok {
+				return fmt.Errorf("LLM provider required for Module B (run 'roster login llm' or 'roster login claude', or set ROSTER_LLM_API_KEY / ANTHROPIC_API_KEY)")
 			}
 
 			ghClient := gh.NewClient(ghToken)
-			apiClient, err := api.NewClient(api.ClientConfig{
-				Provider: api.ProviderDirect,
-				APIKey:   claudeKey,
-			}, nil)
+			apiClient, err := llmCfg.NewClient()
 			if err != nil {
-				return fmt.Errorf("init claude client: %w", err)
+				return fmt.Errorf("init LLM client: %w", err)
 			}
 
 			recorder := audit.NewRecorder(audit.DefaultBaseDir())
-			mod := pr_review.New(ghClient, apiClient, "", pr_review.Config{
+			mod := pr_review.New(ghClient, apiClient, llmCfg.Model, pr_review.Config{
 				CanApprove:        canApprove,
 				CanRequestChanges: canRequestChanges,
 			}).WithAudit(recorder)

@@ -45,10 +45,11 @@ func (w WelcomeHeader) IsShown() bool {
 // View renders the welcome header banner.
 // Format:
 //
-//	     Roster v0.1.0
-//	     claude-sonnet-4-20250514 · API Usage Billing
-//	     ~/path/to/cwd
-//	     Welcome to Roster!  /effort to tune speed vs. intelligence
+//	┌──[ Roster vX.Y.Z ]──
+//	│  <model-or-config-hint>
+//	│  ~/path/to/cwd
+//	│  Welcome to Roster!  /effort to tune speed vs. intelligence
+//	└──
 func (w WelcomeHeader) View(width int, theme Theme) string {
 	if w.shown {
 		return ""
@@ -56,28 +57,24 @@ func (w WelcomeHeader) View(width int, theme Theme) string {
 
 	var sb strings.Builder
 
-	// ASCII art logo (cute face without ears - cleaner look)
+	// ASCII art logo (employee with ID badge — see renderLogo).
 	logo := renderLogo(theme)
 
-	// Version line
+	// Version line.
 	versionLine := primaryStyle(theme).Bold(true).Render(fmt.Sprintf("Roster v%s", w.version))
 
-	// Model + billing info
+	// Model line. Falls back to a config hint when no model is configured —
+	// must NOT leak a default vendor/model name (undercover invariant).
 	modelStr := w.model
 	if modelStr == "" {
-		modelStr = "claude-sonnet-4-20250514"
+		modelStr = "(no model — set llm.model in .roster/config.yml)"
 	}
-	modelLine := lipgloss.JoinHorizontal(
-		lipgloss.Left,
-		secondaryStyle(theme).Render(modelStr),
-		mutedStyle(theme).Render(" · "),
-		mutedStyle(theme).Render("API Usage Billing"),
-	)
+	modelLine := secondaryStyle(theme).Render(modelStr)
 
-	// Working directory
+	// Working directory.
 	cwdLine := mutedStyle(theme).Render(shortenPath(w.cwd))
 
-	// Welcome message
+	// Welcome message.
 	welcomeLine := lipgloss.JoinHorizontal(
 		lipgloss.Left,
 		successStyle(theme).Render("Welcome to Roster!"),
@@ -95,7 +92,7 @@ func (w WelcomeHeader) View(width int, theme Theme) string {
 		welcomeLine,
 	)
 
-	// Join logo and info horizontally with center alignment
+	// Join logo and info horizontally with center alignment.
 	banner := lipgloss.JoinHorizontal(
 		lipgloss.Center,
 		logo,
@@ -103,11 +100,23 @@ func (w WelcomeHeader) View(width int, theme Theme) string {
 		infoBlock,
 	)
 
-	sb.WriteString(banner)
+	// Wrap in a rounded card with the Roster brand colour on the border.
+	// Padding gives the content a little breathing room from the edge.
+	boxed := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(rosterBrandColor).
+		Padding(0, 2).
+		Render(banner)
+
+	sb.WriteString(boxed)
 	sb.WriteString("\n")
 
 	return sb.String()
 }
+
+// rosterBrandColor is the single source for the indigo accent used by
+// the logo and the welcome card border.
+var rosterBrandColor = lipgloss.Color("#6366F1")
 
 // renderLogo renders the Roster ASCII art logo: a tiny employee with an
 // ID badge — visualising "AI as a virtual coworker holding a roster slot".
@@ -119,10 +128,8 @@ func renderLogo(theme Theme) string {
 		" └─────┘",
 	}
 
-	// Roster brand color: indigo — AI assistant identity
-	rosterColor := lipgloss.Color("#6366F1")
 	logoStyle := lipgloss.NewStyle().
-		Foreground(rosterColor).
+		Foreground(rosterBrandColor).
 		Bold(true)
 
 	var rendered []string

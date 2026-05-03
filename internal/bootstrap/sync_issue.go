@@ -9,9 +9,9 @@ import (
 
 	gh "github.com/45online/roster/internal/adapters/github"
 	"github.com/45online/roster/internal/adapters/jira"
-	"github.com/45online/roster/internal/api"
 	"github.com/45online/roster/internal/audit"
 	"github.com/45online/roster/internal/modules/issue_to_jira"
+	"github.com/45online/roster/internal/projcfg"
 )
 
 // newSyncIssueCmd builds the `roster sync-issue` command — Module A's
@@ -64,17 +64,16 @@ Credentials are read from environment variables:
 				},
 			}).WithAudit(recorder)
 
-			// Optional Claude extractor: enabled iff a Claude API key is available.
-			if claudeKey := r.claude(); claudeKey != "" {
-				apiClient, apiErr := api.NewClient(api.ClientConfig{
-					Provider: api.ProviderDirect,
-					APIKey:   claudeKey,
-				}, nil)
+			// Optional AI extractor — supports any configured LLM provider
+			// (Anthropic / OpenAI-compatible). Falls back to mechanical
+			// mapping when no provider is configured.
+			if llmCfg, ok := r.llm(projcfg.LLM{}); ok {
+				apiClient, apiErr := llmCfg.NewClient()
 				if apiErr == nil {
-					mod = mod.WithExtractor(issue_to_jira.NewExtractor(apiClient, ""))
-					fmt.Println("✓ Claude extractor enabled")
+					mod = mod.WithExtractor(issue_to_jira.NewExtractor(apiClient, llmCfg.Model))
+					fmt.Printf("✓ AI extractor enabled (provider=%s)\n", llmCfg.Provider)
 				} else {
-					fmt.Fprintf(os.Stderr, "⚠ Claude client init failed (%v); falling back to mechanical mapping\n", apiErr)
+					fmt.Fprintf(os.Stderr, "⚠ LLM client init failed (%v); falling back to mechanical mapping\n", apiErr)
 				}
 			}
 

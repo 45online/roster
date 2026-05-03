@@ -8,6 +8,39 @@ const Template = `# Roster project configuration.
 project_name: ""             # human-friendly name for this project
 identity: ""                 # the virtual employee account (must match GH login)
 
+# LLM provider — pick which AI backs Modules A / B / C.
+#
+#   provider: anthropic         (default — Claude via api.anthropic.com)
+#   provider: openai-compatible (any OpenAI Chat Completions endpoint)
+#
+# DeepSeek (cheapest, usually):
+#   provider: openai-compatible
+#   base_url: https://api.deepseek.com
+#   model:    deepseek-chat
+#
+# xAI:
+#   provider: openai-compatible
+#   base_url: https://api.x.ai/v1
+#   model:    grok-3
+#
+# Gemini (OpenAI-compat endpoint):
+#   provider: openai-compatible
+#   base_url: https://generativelanguage.googleapis.com/v1beta/openai/
+#   model:    gemini-2.5-flash
+#
+# OpenAI:
+#   provider: openai-compatible
+#   base_url: https://api.openai.com/v1
+#   model:    gpt-4o-mini
+#
+# API key never lives in YAML — set ROSTER_LLM_API_KEY in env, or run
+# 'roster login llm'. ANTHROPIC_API_KEY / 'roster login claude' is also
+# honored (legacy Anthropic-only path).
+llm:
+  provider: anthropic
+  # base_url: ""
+  # model: ""
+
 modules:
   # Module A — sync new GitHub issues to Jira tickets.
   issue_to_jira:

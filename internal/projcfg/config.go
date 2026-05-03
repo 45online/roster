@@ -16,10 +16,27 @@ import (
 type Config struct {
 	ProjectName string  `yaml:"project_name"`
 	Identity    string  `yaml:"identity"`
+	LLM         LLM     `yaml:"llm"`
 	Modules     Modules `yaml:"modules"`
 	Budget      Budget  `yaml:"budget"`
 	Webhook     Webhook `yaml:"webhook"`
 	DryRun      bool    `yaml:"dry_run"`
+}
+
+// LLM selects the AI provider Roster uses for Modules A / B / C.
+// Provider:
+//   - "" or "anthropic"        — Claude via api.anthropic.com (default)
+//   - "openai-compatible"      — any endpoint speaking OpenAI Chat
+//                                 Completions (DeepSeek, xAI, Gemini
+//                                 OpenAI-compat, Together, Groq, ...)
+//
+// API key never lives in the YAML — use env (ROSTER_LLM_API_KEY /
+// ANTHROPIC_API_KEY) or the credential store ('roster login llm' /
+// 'roster login claude').
+type LLM struct {
+	Provider string `yaml:"provider"`
+	BaseURL  string `yaml:"base_url"` // required when provider=openai-compatible
+	Model    string `yaml:"model"`    // required when provider=openai-compatible
 }
 
 // Webhook configures the embedded GitHub webhook receiver. When enabled,
@@ -159,6 +176,19 @@ func (c *Config) Validate() error {
 		c.Budget.OnExceed != "downgrade" &&
 		c.Budget.OnExceed != "stop" {
 		return fmt.Errorf("budget.on_exceed must be 'downgrade' or 'stop' (got %q)", c.Budget.OnExceed)
+	}
+	switch c.LLM.Provider {
+	case "", "anthropic":
+		// fine
+	case "openai-compatible":
+		if c.LLM.BaseURL == "" {
+			return fmt.Errorf("llm.provider=openai-compatible but llm.base_url is empty")
+		}
+		if c.LLM.Model == "" {
+			return fmt.Errorf("llm.provider=openai-compatible but llm.model is empty")
+		}
+	default:
+		return fmt.Errorf("llm.provider must be 'anthropic' or 'openai-compatible' (got %q)", c.LLM.Provider)
 	}
 	return nil
 }

@@ -69,6 +69,22 @@ func TestRenderLogo(t *testing.T) {
 	}
 }
 
+// Undercover invariant: when no model is configured the banner must
+// NOT fall back to a hardcoded vendor model name (e.g.
+// "claude-sonnet-4-…"). It should nudge the operator to fill in config.
+func TestWelcomeHeader_NoModel_DoesNotLeakHardcodedVendor(t *testing.T) {
+	h := NewWelcomeHeader("", "/tmp/x")
+	view := h.View(80, DefaultDarkTheme)
+	for _, forbidden := range []string{"claude-sonnet", "claude-haiku", "claude-opus", "gpt-4"} {
+		if strings.Contains(view, forbidden) {
+			t.Errorf("banner leaked hardcoded model %q:\n%s", forbidden, view)
+		}
+	}
+	if !strings.Contains(view, "no model") {
+		t.Errorf("expected config-hint placeholder, got:\n%s", view)
+	}
+}
+
 func TestInputView_HasPrompt(t *testing.T) {
 	input := NewInput(false)
 	view := input.View(DefaultDarkTheme)

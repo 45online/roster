@@ -71,6 +71,8 @@ GitHub  ←→  Roster (AI 员工)  ←→  Jira / Confluence / Slack
 - Claude API key
 - (可选)Jira / Confluence / Slack 的 API token
 
+> **LLM provider**:Claude API、DeepSeek、xAI Grok、Gemini(OpenAI-compat)、OpenAI、Together、Groq 等任何 OpenAI Chat Completions 兼容端点都可用。`roster login llm` 配置;DeepSeek 是目前最便宜的可用之选。详见 [价格表](#预算与成本)。
+
 ### 安装(三选一)
 
 **A. 从源码**(需要 Go 1.26+)
@@ -114,7 +116,7 @@ brew install 45online/tap/roster
 # 方式 A:一次性 login(推荐)
 roster login github          # 提示输入 PAT,保存到 ~/.roster/credentials.json (0600)
 roster login jira            # URL / email / token
-roster login claude          # 可选,启用 AI 字段抽取
+roster login llm             # provider / base_url / model / api_key — 多 provider
 roster login status          # 看哪些已配置
 
 # 方式 B:环境变量(临时 / CI 友好)
@@ -122,8 +124,28 @@ export ROSTER_GITHUB_TOKEN=ghp_xxx
 export ROSTER_JIRA_URL=https://yourorg.atlassian.net
 export ROSTER_JIRA_EMAIL=you@example.com
 export ROSTER_JIRA_TOKEN=xxxx
-export ANTHROPIC_API_KEY=sk-ant-xxx       # 可选
+
+# LLM(任选其一组合)
+export ROSTER_LLM_PROVIDER=openai-compatible
+export ROSTER_LLM_BASE_URL=https://api.deepseek.com
+export ROSTER_LLM_MODEL=deepseek-chat
+export ROSTER_LLM_API_KEY=sk-...
+# 或者只用 Anthropic 路径(向后兼容):
+# export ANTHROPIC_API_KEY=sk-ant-xxx
 ```
+
+#### LLM provider 选项
+
+| Provider | base_url | 推荐 model | 价格(input/output per Mtok) |
+|---|---|---|---|
+| Anthropic Claude | (默认) | `claude-haiku-4-5-20251001` | $1 / $5 |
+| Anthropic Claude | (默认) | `claude-sonnet-4-6-20250514` | $3 / $15 |
+| **DeepSeek**(便宜) | `https://api.deepseek.com` | `deepseek-chat` | $0.27 / $1.10 |
+| Google Gemini | `https://generativelanguage.googleapis.com/v1beta/openai/` | `gemini-2.5-flash` | $0.075 / $0.30 |
+| OpenAI | `https://api.openai.com/v1` | `gpt-4o-mini` | $0.15 / $0.60 |
+| xAI Grok | `https://api.x.ai/v1` | `grok-3` | $2 / $10 |
+
+DeepSeek 和 Gemini Flash 通常成本是 Claude Haiku 的 1/3 到 1/10,Module A/B/C 的简单结构化抽取够用。`roster status` 仍按真实 model 累计 MTD 成本,价格表内置。
 
 **A. 一次性手动同步**
 ```bash

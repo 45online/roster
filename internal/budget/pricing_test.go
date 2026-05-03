@@ -17,6 +17,14 @@ func TestModelPrice_KnownFamilies(t *testing.T) {
 		{"claude-haiku-4-5-20251001", 1.00, 5.00, true},
 		{"claude-sonnet-4-6-20250514", 3.00, 15.00, true},
 		{"claude-opus-4-7", 15.00, 75.00, true},
+		{"gpt-4o", 2.50, 10.00, true},
+		{"gpt-4o-mini", 0.15, 0.60, true},
+		{"gpt-4.1-mini", 0.40, 1.60, true}, // longest-prefix wins over gpt-4
+		{"deepseek-chat", 0.27, 1.10, true},
+		{"deepseek-reasoner", 0.55, 2.19, true},
+		{"gemini-2.5-flash", 0.075, 0.30, true},
+		{"gemini-2.5-pro", 1.25, 10.00, true},
+		{"grok-3", 2.00, 10.00, true},
 		{"unknown-model-x", 0, 0, false},
 		{"", 0, 0, false},
 	}

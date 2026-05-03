@@ -105,16 +105,19 @@ Credentials (env vars):
 				}),
 			}).WithAudit(recorder)
 
-			// Optional Claude extractor for Module A and Module B.
+			// Optional AI extractor for Modules A / B / C — supports any
+			// configured LLM provider (Anthropic / OpenAI-compatible).
 			var apiClient api.Client
-			if claudeKey := r.claude(); claudeKey != "" {
-				if c, apiErr := api.NewClient(api.ClientConfig{
-					Provider: api.ProviderDirect,
-					APIKey:   claudeKey,
-				}, nil); apiErr == nil {
+			var llmModel string
+			if llmCfg, ok := r.llm(cfg.LLM); ok {
+				if c, apiErr := llmCfg.NewClient(); apiErr == nil {
 					apiClient = c
-					modA = modA.WithExtractor(issue_to_jira.NewExtractor(apiClient, ""))
-					fmt.Println("✓ Claude extractor enabled")
+					llmModel = llmCfg.Model
+					modA = modA.WithExtractor(issue_to_jira.NewExtractor(apiClient, llmModel))
+					fmt.Printf("✓ AI extractor enabled (provider=%s%s)\n",
+						llmCfg.Provider, modelHint(llmModel))
+				} else {
+					fmt.Fprintf(os.Stderr, "⚠ LLM client init failed (%v); modules will run without AI\n", apiErr)
 				}
 			}
 
@@ -122,9 +125,9 @@ Credentials (env vars):
 			var modB *pr_review.Module
 			if cfg.Modules.PRReview.Enabled {
 				if apiClient == nil {
-					fmt.Fprintln(os.Stderr, "⚠ pr_review.enabled=true but no Claude API key — Module B disabled")
+					fmt.Fprintln(os.Stderr, "⚠ pr_review.enabled=true but no LLM provider configured — Module B disabled")
 				} else {
-					modB = pr_review.New(ghClient, apiClient, "", pr_review.Config{
+					modB = pr_review.New(ghClient, apiClient, llmModel, pr_review.Config{
 						SkipPaths:         cfg.Modules.PRReview.SkipPaths,
 						MaxDiffBytes:      cfg.Modules.PRReview.MaxDiffBytes,
 						CanApprove:        cfg.Modules.PRReview.CanApprove,
@@ -140,7 +143,7 @@ Credentials (env vars):
 			if cfg.Modules.IssueToConfluence.Enabled {
 				switch {
 				case apiClient == nil:
-					fmt.Fprintln(os.Stderr, "⚠ issue_to_confluence.enabled=true but no Claude API key — Module C disabled")
+					fmt.Fprintln(os.Stderr, "⚠ issue_to_confluence.enabled=true but no LLM provider configured — Module C disabled")
 				case cfg.Modules.IssueToConfluence.SpaceID == "":
 					fmt.Fprintln(os.Stderr, "⚠ issue_to_confluence.enabled=true but space_id is empty — Module C disabled")
 				default:
@@ -155,7 +158,7 @@ Credentials (env vars):
 							fmt.Fprintln(os.Stderr, "⚠ slack_channel set but no Slack token; Module C will skip notifications")
 						}
 					}
-					modC = issue_to_confluence.New(ghClient, confClient, slackCli, apiClient, "", issue_to_confluence.Config{
+					modC = issue_to_confluence.New(ghClient, confClient, slackCli, apiClient, llmModel, issue_to_confluence.Config{
 						SpaceID:        cfg.Modules.IssueToConfluence.SpaceID,
 						ParentPageID:   cfg.Modules.IssueToConfluence.ParentPageID,
 						CompletedLabel: cfg.Modules.IssueToConfluence.CompletedLabel,
@@ -389,6 +392,15 @@ func orMap(m, def map[string]string) map[string]string {
 		return m
 	}
 	return def
+}
+
+// modelHint formats the model id (if any) as " · model=<name>" so the
+// startup banner can append it without hardcoding punctuation.
+func modelHint(model string) string {
+	if model == "" {
+		return ""
+	}
+	return " · model=" + model
 }
 
 // signalContext returns a Context that's cancelled on SIGINT or SIGTERM.

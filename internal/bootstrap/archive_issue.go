@@ -10,9 +10,9 @@ import (
 	"github.com/45online/roster/internal/adapters/confluence"
 	gh "github.com/45online/roster/internal/adapters/github"
 	"github.com/45online/roster/internal/adapters/slack"
-	"github.com/45online/roster/internal/api"
 	"github.com/45online/roster/internal/audit"
 	"github.com/45online/roster/internal/modules/issue_to_confluence"
+	"github.com/45online/roster/internal/projcfg"
 )
 
 // newArchiveIssueCmd builds `roster archive-issue`: Module C's manual
@@ -48,19 +48,16 @@ config defines one) and 'roster login slack' has been run.
 			if err != nil {
 				return fmt.Errorf("Confluence reuses Jira credentials: %w", err)
 			}
-			claudeKey := r.claude()
-			if claudeKey == "" {
-				return fmt.Errorf("Claude API key required (set ANTHROPIC_API_KEY or run 'roster login claude')")
+			llmCfg, ok := r.llm(projcfg.LLM{})
+			if !ok {
+				return fmt.Errorf("LLM provider required for Module C (run 'roster login llm' or 'roster login claude', or set ROSTER_LLM_API_KEY / ANTHROPIC_API_KEY)")
 			}
 
 			ghClient := gh.NewClient(ghToken)
 			confClient := confluence.NewClient(confURL, confEmail, confToken)
-			apiClient, err := api.NewClient(api.ClientConfig{
-				Provider: api.ProviderDirect,
-				APIKey:   claudeKey,
-			}, nil)
+			apiClient, err := llmCfg.NewClient()
 			if err != nil {
-				return fmt.Errorf("init claude client: %w", err)
+				return fmt.Errorf("init LLM client: %w", err)
 			}
 
 			var slackClient *slack.Client
@@ -75,7 +72,7 @@ config defines one) and 'roster login slack' has been run.
 			}
 
 			recorder := audit.NewRecorder(audit.DefaultBaseDir())
-			mod := issue_to_confluence.New(ghClient, confClient, slackClient, apiClient, "", issue_to_confluence.Config{
+			mod := issue_to_confluence.New(ghClient, confClient, slackClient, apiClient, llmCfg.Model, issue_to_confluence.Config{
 				SpaceID:        spaceID,
 				ParentPageID:   parentID,
 				CompletedLabel: completedLabel,
