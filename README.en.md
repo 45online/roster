@@ -24,12 +24,13 @@ GitHub  ←→  Roster (AI employee)  ←→  Jira / Confluence / Slack
 
 ## Status
 
-**Released: [v0.2.1](https://github.com/45online/roster/releases/tag/v0.2.1)** — every phase the design doc planned is implemented: four end-to-end modules, two-mode budget threshold, undercover identity isolation, polling + webhook event sources, cross-platform binaries + multi-arch Docker, **multi-LLM provider** (Claude / DeepSeek / Gemini / OpenAI / xAI / any OpenAI-compatible endpoint).
+**Released: [v0.3.0](https://github.com/45online/roster/releases/tag/v0.3.0)** — Project Memory shipped. Each repo now keeps four well-known files at `.roster/memory/` (conventions / decisions / module_owners / glossary), and every AI module inlines them into its system prompt on every call. This is the first concrete step of the "AI = tool + time" thesis from [PRINCIPLES.md](PRINCIPLES.md): the same model gets *more* familiar with this project every day, without retraining.
 
 **Next chapter: dogfood.** Feature-filling stops here. The next week is
 about running Roster against a real repo and watching what assumptions
-break (prompt tuning / module boundaries / UX rough edges). Full release
-history: [CHANGELOG.md](CHANGELOG.md).
+break (prompt tuning / module boundaries / how good a 5-line
+`conventions.md` actually is). Full release history:
+[CHANGELOG.md](CHANGELOG.md).
 
 | Phase | Status |
 |---|---|
@@ -53,6 +54,7 @@ history: [CHANGELOG.md](CHANGELOG.md).
 | 9. Multi-LLM provider (Anthropic / OpenAI-compatible) | ✅ v0.2.0 |
 | 10. Helm chart (Kubernetes deployment) | ✅ v0.2.1 |
 | 11. Slack slash command (`/roster …`) | ✅ v0.2.1 |
+| 12. Project Memory (`.roster/memory/`) | ✅ v0.3.0 |
 
 ---
 
@@ -378,6 +380,42 @@ Configuring the Slack app:
 4. Install to Workspace
 
 Features: HMAC-v0 signature verification (constant-time + 5-min replay window). `status` runs synchronously and returns inline; `sync-issue` / `review-pr` / `archive-issue` immediately ack with `:hourglass_flowing_sand: queued` and run in a background goroutine (Slack's 3-second response window forbids running the full module call inline). Results land in GitHub / Jira / Confluence directly, not back in Slack. The dispatcher guards against cross-repo invocations: a Roster pod manages a single repo, and the Slack command's repo must match.
+
+### Project Memory (v0.3.0+)
+
+`roster init` scaffolds four well-known files under `.roster/memory/`:
+
+```
+.roster/memory/
+├── conventions.md       # PR / coding / testing rules
+├── decisions.md         # recent architectural decisions (and why)
+├── module_owners.md     # who owns which module, who reviews
+└── glossary.md          # project-specific terms
+```
+
+On every AI call (Module A field extraction / Module B PR review /
+Module C Confluence summary), Roster reads these files and inlines
+them into the system prompt. **Plain markdown, no vector DB, no RAG**
+— the reasoning is in [PRINCIPLES.md](PRINCIPLES.md).
+
+Concrete effect: writing five lines into `conventions.md` —
+
+```
+## PR
+- PR < 300 lines
+- Tests required for non-trivial logic
+## Style
+- Functional Go preferred; no ORMs
+```
+
+— makes Module B's *very next* PR review match team conventions.
+**No restart, no prompt tuning, no fine-tuning.** Edit the file →
+takes effect on the next call.
+
+Limits: ≤ 16 KB per file, ≤ 64 KB total (excess is truncated and
+marked). Missing or empty files are silently skipped — they never
+fail the daemon. `roster init --force` does **not** overwrite existing
+memory files; we're protective of human-authored knowledge.
 
 ### Undercover Mode (always on)
 

@@ -21,6 +21,7 @@ import (
 	"github.com/45online/roster/internal/api"
 	"github.com/45online/roster/internal/audit"
 	"github.com/45online/roster/internal/budget"
+	"github.com/45online/roster/internal/memory"
 	"github.com/45online/roster/internal/undercover"
 )
 
@@ -52,6 +53,7 @@ type Module struct {
 	cfg        Config
 	model      string
 	audit      *audit.Recorder
+	memory     *memory.Memory // optional project memory inlined into prompt
 }
 
 // New constructs Module C. slackCli may be nil — Slack notification is
@@ -72,6 +74,15 @@ func New(github *gh.Client, conf *confluence.Client, slackCli *slack.Client, cla
 // WithAudit attaches an audit recorder.
 func (m *Module) WithAudit(r *audit.Recorder) *Module {
 	m.audit = r
+	return m
+}
+
+// WithMemory attaches the project memory loaded from .roster/memory/.
+// Inlined into the summarisation prompt so Claude knows the project's
+// terminology, conventions, and recent decisions when archiving an
+// issue thread to Confluence.
+func (m *Module) WithMemory(mem *memory.Memory) *Module {
+	m.memory = mem
 	return m
 }
 
@@ -195,7 +206,7 @@ func (m *Module) askClaude(ctx context.Context, repo string, issue *gh.Issue, co
 	req := &api.MessageRequest{
 		Model:       m.model,
 		MaxTokens:   4096,
-		System:      summarizeSystemPrompt + undercover.SystemSuffix,
+		System:      summarizeSystemPrompt + undercover.SystemSuffix + m.memory.Inject(),
 		Messages:    []api.MessageParam{{Role: "user", Content: contentJSON}},
 		QuerySource: "background",
 	}

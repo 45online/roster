@@ -7,10 +7,70 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-Nothing pending after v0.2.1. Real-world dogfood feedback is the next
-chapter — both the multi-LLM provider switch (DeepSeek vs Claude on
-actual workloads) and the operational paths just shipped (Helm /
-Slack).
+Nothing pending. v0.3.0 lands the first piece of the long-term
+"AI = tool + time" thesis — Project Memory. Next chapter is real-world
+dogfood feedback to see whether 5-line `conventions.md` actually
+changes module output quality.
+
+---
+
+## [v0.3.0] — 2026-05-03
+
+**Project Memory.** First step of "give the tool a time dimension"
+(see `PRINCIPLES.md`). Every AI module now reads four well-known
+markdown files at `<repo>/.roster/memory/` and inlines them into the
+system prompt — so the model sees project conventions, recent
+decisions, module owners, and glossary on every call.
+
+### Added
+- `internal/memory`: small package with one struct (`Memory`) and one
+  rendering helper (`Inject`). Reads
+    `.roster/memory/conventions.md`
+    `.roster/memory/decisions.md`
+    `.roster/memory/module_owners.md`
+    `.roster/memory/glossary.md`
+  Per-file cap 16 KB, aggregate cap 64 KB. Empty / missing files are
+  silently skipped — the loader never fails the daemon over memory.
+  9 unit tests covering load / truncation / aggregate-cap / nil-safe
+  rendering / empty-file skipping.
+- `Module.WithMemory(*memory.Memory)` on all three AI modules
+  (issue_to_jira, pr_review, issue_to_confluence). Memory is rendered
+  *after* the undercover suffix so the model can't undo it.
+  `issue_to_jira.Extractor.WithSystemSuffix(string)` carries memory
+  into the field-extractor path; the Module-level `WithExtractor` /
+  `WithMemory` setters are order-independent (each forwards memory
+  to the extractor whichever is set last).
+- `roster init` now also scaffolds `.roster/memory/` with all four
+  files prefilled with a heading + a commented-out example, so a new
+  user sees the structure before they fill it in.
+- All four entry points (`takeover`, `sync-issue`, `review-pr`,
+  `archive-issue`) load memory at startup. `takeover` prints
+    `✓ Project memory loaded: 3 files, 4218 bytes`
+  when something was found.
+
+### Notes
+- Module D (alert aggregation) doesn't read memory — it doesn't call
+  Claude.
+- Memory is plain markdown by deliberate choice (PRINCIPLES.md §
+  "Truly first-principles"). RAG / vector DB / embeddings are not
+  introduced.
+- `roster init --force` does not overwrite existing memory files —
+  only the absent ones are scaffolded. We're protective of human-
+  authored knowledge.
+
+### Why this matters
+Stage 2 → stage 3 transition (single AI agent → AI agent with
+persistent project context). Concrete day-1 effect: a 5-line
+`conventions.md` like
+
+    ## PR
+    - PR < 300 lines
+    - Tests required for non-trivial logic
+    ## Style
+    - Functional Go preferred; no ORMs
+
+makes Module B's review judgement match team conventions on the very
+next PR. No prompt engineering, no reconfiguration, no fine-tuning.
 
 ---
 

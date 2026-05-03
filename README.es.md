@@ -20,9 +20,9 @@ GitHub  ←→  Roster (empleado IA)  ←→  Jira / Confluence / Slack
 
 ## Estado
 
-**Publicado: [v0.2.1](https://github.com/45online/roster/releases/tag/v0.2.1)** — todas las fases del documento de diseño están implementadas: 4 módulos punto-a-punto, umbral de Budget en dos modos, aislamiento de identidad Undercover, fuentes de eventos polling + webhook, binarios multiplataforma + Docker multiarquitectura, **proveedor LLM múltiple** (Claude / DeepSeek / Gemini / OpenAI / xAI / cualquier endpoint compatible con OpenAI).
+**Publicado: [v0.3.0](https://github.com/45online/roster/releases/tag/v0.3.0)** — Project Memory entregado. Cada repo mantiene cuatro archivos convenidos en `.roster/memory/` (conventions / decisions / module_owners / glossary), y cada módulo de IA los inyecta en el system prompt en cada llamada. Es el primer paso concreto de la tesis "IA = herramienta + tiempo" de [PRINCIPLES.md](PRINCIPLES.md): el mismo modelo se vuelve *más* familiar con el proyecto cada día, sin reentrenamiento.
 
-**Próxima etapa: dogfood.** Aquí termina el llenado de funcionalidades. La próxima semana es para correr Roster contra un repo real y observar qué supuestos se rompen (ajuste de prompts / fronteras de módulos / asperezas de UX). Historial completo: [CHANGELOG.md](CHANGELOG.md).
+**Próxima etapa: dogfood.** Aquí termina el llenado de funcionalidades. La próxima semana es para correr Roster contra un repo real y observar qué supuestos se rompen (ajuste de prompts / fronteras de módulos / qué tan útil es realmente un `conventions.md` de 5 líneas). Historial completo: [CHANGELOG.md](CHANGELOG.md).
 
 | Fase | Estado |
 |---|---|
@@ -46,6 +46,7 @@ GitHub  ←→  Roster (empleado IA)  ←→  Jira / Confluence / Slack
 | 9. Proveedor LLM múltiple (Anthropic / OpenAI-compatible) | ✅ v0.2.0 |
 | 10. Helm chart (despliegue Kubernetes) | ✅ v0.2.1 |
 | 11. Slash command de Slack (`/roster …`) | ✅ v0.2.1 |
+| 12. Project Memory (`.roster/memory/`) | ✅ v0.3.0 |
 
 ---
 
@@ -299,6 +300,43 @@ Configurando la app de Slack ([api.slack.com/apps](https://api.slack.com/apps) �
 3. Install to Workspace
 
 Características: verificación de firma HMAC-v0 (constant-time + ventana anti-replay de 5 min). `status` corre síncrono y devuelve inline; `sync-issue` / `review-pr` / `archive-issue` reconocen al instante con `:hourglass_flowing_sand: queued` y corren en una goroutine de fondo (la ventana de 3 segundos de Slack prohíbe correr la llamada completa al módulo inline). Los resultados aparecen en GitHub / Jira / Confluence directamente, no vuelven a Slack. El despachador protege contra invocaciones cross-repo: un Pod de Roster gestiona un solo repo, y el repo del comando Slack debe coincidir.
+
+### Project Memory (desde v0.3.0)
+
+`roster init` genera cuatro archivos convenidos bajo `.roster/memory/`:
+
+```
+.roster/memory/
+├── conventions.md       # convenciones de PR / código / pruebas
+├── decisions.md         # decisiones arquitectónicas recientes (y por qué)
+├── module_owners.md     # quién posee cada módulo, quién revisa
+└── glossary.md          # términos del proyecto
+```
+
+En cada llamada a IA (Módulo A extracción / B revisión PR / C
+resumen Confluence), Roster lee estos archivos y los inyecta en el
+system prompt. **Markdown puro, sin BD vectorial, sin RAG** — el
+razonamiento está en [PRINCIPLES.md](PRINCIPLES.md).
+
+Efecto concreto: escribir cinco líneas en `conventions.md` —
+
+```
+## PR
+- PR < 300 líneas
+- Tests requeridos para lógica no trivial
+## Estilo
+- Go funcional preferido; sin ORMs
+```
+
+— hace que la *siguiente* revisión de PR del Módulo B coincida con
+las convenciones del equipo. **Sin reinicio, sin ajuste de prompts,
+sin fine-tuning.** Editas el archivo → efecto en la próxima llamada.
+
+Límites: ≤ 16 KB por archivo, ≤ 64 KB total (el exceso se trunca y
+se marca). Archivos ausentes o vacíos se omiten silenciosamente —
+nunca tumban el daemon. `roster init --force` **no** sobreescribe
+archivos de memoria existentes; protegemos el conocimiento escrito
+por humanos.
 
 ### Undercover Mode (siempre activo)
 

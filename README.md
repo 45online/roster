@@ -20,9 +20,9 @@ GitHub  ←→  Roster (AI 员工)  ←→  Jira / Confluence / Slack
 
 ## 状态
 
-**已发布:[v0.2.1](https://github.com/45online/roster/releases/tag/v0.2.1)** —— design 文档规划的所有阶段都已实现:4 个业务模块端到端,Budget 双模阈值,Undercover 身份隔离,Polling + Webhook 双事件源,跨平台二进制 + 多架构 docker。
+**已发布:[v0.3.0](https://github.com/45online/roster/releases/tag/v0.3.0)** —— Project Memory 落地。每个 repo 在 `.roster/memory/` 维护 4 个约定文件(conventions / decisions / module_owners / glossary),所有 AI 模块每次调用都会把它们注入 system prompt。这是 [PRINCIPLES.md](PRINCIPLES.md) 里"AI = 工具 + 时间维度"主张的第一步:让 AI 一天比一天更熟悉这个项目。
 
-**下一阶段:dogfood**。功能填空到此为止,接下来在真 repo 上跑一周,看 prompt 调优 / 模块边界 / UX 痛点暴露什么真正的问题再做。完整 release 历史见 [CHANGELOG.md](CHANGELOG.md)。
+**下一阶段:dogfood**。功能填空到此为止,接下来在真 repo 上跑一周,看 prompt 调优 / 模块边界 / Memory 文件实际效果再做。完整 release 历史见 [CHANGELOG.md](CHANGELOG.md)。
 
 | 阶段 | 状态 |
 |---|---|
@@ -46,6 +46,7 @@ GitHub  ←→  Roster (AI 员工)  ←→  Jira / Confluence / Slack
 | 9. 多 LLM provider(Anthropic / OpenAI-compatible) | ✅ v0.2.0 |
 | 10. Helm chart(K8s 部署) | ✅ v0.2.1 |
 | 11. Slack slash command(`/roster …`) | ✅ v0.2.1 |
+| 12. Project Memory(`.roster/memory/`) | ✅ v0.3.0 |
 
 ---
 
@@ -421,6 +422,34 @@ GitHub-style 配置(Slack app):
 - **`status` 同步**(立即返回结果)
 - **`sync-issue`/`review-pr`/`archive-issue` 异步**(立即回 200 + "queued",后台处理 — 因为 Slack 限制 3 秒响应,实际 module 调用可能 ~10s)。结果直接出现在 GitHub / Jira / Confluence,不再回 Slack。
 - **单 repo 守卫**:这个 Roster 实例只接管一个 repo,Slack 命令 repo 必须匹配,否则报错
+
+### Project Memory(v0.3.0 起)
+
+`roster init` 会在 `.roster/memory/` 下生成四个约定文件:
+
+```
+.roster/memory/
+├── conventions.md       # 项目代码 / PR / 测试约定
+├── decisions.md         # 近期架构决策(为什么这样选)
+├── module_owners.md     # 哪个模块归谁,谁是 reviewer
+└── glossary.md          # 项目术语表
+```
+
+每次 AI 模块调用(Module A 字段抽取 / B PR review / C Confluence 摘要),Roster 都会读取这些文件并注入到 system prompt 里。**纯 markdown,无向量库,无 RAG**(理由见 [PRINCIPLES.md](PRINCIPLES.md))。
+
+实际效果:`conventions.md` 写上 5 行
+
+```
+## PR
+- PR < 300 行
+- 非平凡逻辑必须配测试
+## 风格
+- 函数式 Go 优先,不引入 ORM
+```
+
+下一次 PR review,Module B 的判断会立刻按队内规约走。**不需要重启,不需要 prompt 调优,不需要微调模型** —— 改文件即生效。
+
+约束:每文件 ≤ 16 KB,合计 ≤ 64 KB(超出会截断并标记)。文件不存在 / 为空都不会报错,只是当作没有 memory。`roster init --force` 不覆盖已有 memory 文件 —— 我们对人写的知识比较保护。
 
 ### Undercover Mode(默认开启)
 

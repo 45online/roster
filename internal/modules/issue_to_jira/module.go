@@ -15,6 +15,7 @@ import (
 	"github.com/45online/roster/internal/api"
 	"github.com/45online/roster/internal/audit"
 	"github.com/45online/roster/internal/budget"
+	"github.com/45online/roster/internal/memory"
 	"github.com/45online/roster/internal/undercover"
 )
 
@@ -40,6 +41,7 @@ type Module struct {
 	cfg       Config
 	extractor *Extractor      // optional Claude-powered field extractor
 	audit     *audit.Recorder // optional audit recorder
+	memory    *memory.Memory  // optional project memory (inlined into system prompt)
 	// aiGuard is optional. When non-nil and returns false, the module
 	// pretends the extractor isn't configured (mechanical mapping
 	// fallback). Used by the budget downgrade path to keep emitting
@@ -56,8 +58,14 @@ func New(github *gh.Client, j *jira.Client, cfg Config) *Module {
 // module asks Claude to derive summary / issue_type / priority / component
 // from the issue text; mechanical label-based mapping remains the fallback
 // path on extraction failure.
+//
+// If WithMemory was already called, its content is forwarded to the new
+// extractor so the order of fluent setters doesn't matter.
 func (m *Module) WithExtractor(e *Extractor) *Module {
 	m.extractor = e
+	if m.memory != nil && e != nil {
+		e.WithSystemSuffix(m.memory.Inject())
+	}
 	return m
 }
 
@@ -65,6 +73,21 @@ func (m *Module) WithExtractor(e *Extractor) *Module {
 // append one entry capturing inputs, AI usage, outcome, and duration.
 func (m *Module) WithAudit(r *audit.Recorder) *Module {
 	m.audit = r
+	return m
+}
+
+// WithMemory attaches the project memory loaded from .roster/memory/.
+// When non-nil, its contents are inlined into the extractor's system
+// prompt — the AI then knows about project conventions, recent
+// decisions, module owners, and glossary at every call.
+//
+// Side-effect: the same memory snapshot is wired into the extractor
+// via WithSystemSuffix so calls flow through one path.
+func (m *Module) WithMemory(mem *memory.Memory) *Module {
+	m.memory = mem
+	if m.extractor != nil && mem != nil {
+		m.extractor.WithSystemSuffix(mem.Inject())
+	}
 	return m
 }
 

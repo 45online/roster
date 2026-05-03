@@ -34,8 +34,9 @@ type ExtractedFields struct {
 
 // Extractor uses Claude to derive structured Jira fields from a GitHub issue.
 type Extractor struct {
-	client api.Client
-	model  string
+	client       api.Client
+	model        string
+	systemSuffix string // appended to the system prompt; typically memory + undercover
 }
 
 // NewExtractor builds an Extractor. If model is "", DefaultExtractorModel
@@ -45,6 +46,15 @@ func NewExtractor(client api.Client, model string) *Extractor {
 		model = DefaultExtractorModel
 	}
 	return &Extractor{client: client, model: model}
+}
+
+// WithSystemSuffix attaches text appended to the system prompt on every
+// Extract call. The Module wires its loaded Project Memory through this
+// hook (memory always renders after undercover.SystemSuffix so it can't
+// be undone by AI sleight-of-hand).
+func (e *Extractor) WithSystemSuffix(s string) *Extractor {
+	e.systemSuffix = s
+	return e
 }
 
 // Extract sends the issue to Claude and returns the parsed fields plus
@@ -62,7 +72,7 @@ func (e *Extractor) Extract(ctx context.Context, issue *github.Issue) (*Extracte
 	req := &api.MessageRequest{
 		Model:     e.model,
 		MaxTokens: 1024,
-		System:    extractorSystemPrompt + undercover.SystemSuffix,
+		System:    extractorSystemPrompt + undercover.SystemSuffix + e.systemSuffix,
 		Messages: []api.MessageParam{
 			{Role: "user", Content: contentJSON},
 		},

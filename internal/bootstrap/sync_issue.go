@@ -10,6 +10,7 @@ import (
 	gh "github.com/45online/roster/internal/adapters/github"
 	"github.com/45online/roster/internal/adapters/jira"
 	"github.com/45online/roster/internal/audit"
+	"github.com/45online/roster/internal/memory"
 	"github.com/45online/roster/internal/modules/issue_to_jira"
 	"github.com/45online/roster/internal/projcfg"
 )
@@ -53,6 +54,7 @@ Credentials are read from environment variables:
 			ghClient := gh.NewClient(ghToken)
 			jiraClient := jira.NewClient(jiraURL, jiraEmail, jiraToken)
 			recorder := audit.NewRecorder(audit.DefaultBaseDir())
+			mem, _ := memory.Load(".") // empty memory if absent — non-fatal
 			mod := issue_to_jira.New(ghClient, jiraClient, issue_to_jira.Config{
 				JiraProject:      jiraProject,
 				DefaultIssueType: defaultType,
@@ -62,7 +64,7 @@ Credentials are read from environment variables:
 					"P1": "High",
 					"P2": "Medium",
 				},
-			}).WithAudit(recorder)
+			}).WithAudit(recorder).WithMemory(mem)
 
 			// Optional AI extractor — supports any configured LLM provider
 			// (Anthropic / OpenAI-compatible). Falls back to mechanical

@@ -11,6 +11,7 @@ import (
 	gh "github.com/45online/roster/internal/adapters/github"
 	"github.com/45online/roster/internal/adapters/slack"
 	"github.com/45online/roster/internal/audit"
+	"github.com/45online/roster/internal/memory"
 	"github.com/45online/roster/internal/modules/issue_to_confluence"
 	"github.com/45online/roster/internal/projcfg"
 )
@@ -72,12 +73,13 @@ config defines one) and 'roster login slack' has been run.
 			}
 
 			recorder := audit.NewRecorder(audit.DefaultBaseDir())
+			mem, _ := memory.Load(".") // empty memory if absent — non-fatal
 			mod := issue_to_confluence.New(ghClient, confClient, slackClient, apiClient, llmCfg.Model, issue_to_confluence.Config{
 				SpaceID:        spaceID,
 				ParentPageID:   parentID,
 				CompletedLabel: completedLabel,
 				SlackChannel:   slackChannel,
-			}).WithAudit(recorder)
+			}).WithAudit(recorder).WithMemory(mem)
 
 			ctx := context.Background()
 			res, err := mod.ArchiveIssue(ctx, repo, issueNum)

@@ -20,9 +20,9 @@ GitHub  ←→  Roster (AI スタッフ)  ←→  Jira / Confluence / Slack
 
 ## ステータス
 
-**リリース済み: [v0.2.1](https://github.com/45online/roster/releases/tag/v0.2.1)** — 設計ドキュメントが計画したフェーズはすべて実装済み:4 つのエンドツーエンドモジュール、2 段階の Budget しきい値、Undercover Mode、Polling + Webhook の二重イベントソース、クロスプラットフォームバイナリ + マルチアーキ Docker、**マルチ LLM プロバイダ**(Claude / DeepSeek / Gemini / OpenAI / xAI / OpenAI 互換エンドポイントすべて)。
+**リリース済み: [v0.3.0](https://github.com/45online/roster/releases/tag/v0.3.0)** — Project Memory が着地。各リポジトリは `.roster/memory/` 配下に 4 つの規約ファイル(conventions / decisions / module_owners / glossary)を保持し、すべての AI モジュールは呼び出しのたびにそれらを system prompt に差し込みます。これは [PRINCIPLES.md](PRINCIPLES.md) の「AI = 道具 + 時間軸」の主張の最初の具体的なステップ:再学習せずに、同じモデルがこのプロジェクトに対して**毎日より馴染んでいく**。
 
-**次のフェーズはドッグフード**。機能の積み上げはここで一区切り。これから 1 週間、実リポジトリで動かして、どの仮定が崩れるか(プロンプトのチューニング / モジュールの境界 / UX の粗)を観察します。リリース履歴は [CHANGELOG.md](CHANGELOG.md)。
+**次のフェーズはドッグフード**。機能の積み上げはここで一区切り。これから 1 週間、実リポジトリで動かして、どの仮定が崩れるか(プロンプトのチューニング / モジュールの境界 / 5 行の `conventions.md` が実際にどれだけ効くか)を観察します。リリース履歴は [CHANGELOG.md](CHANGELOG.md)。
 
 | フェーズ | 状態 |
 |---|---|
@@ -46,6 +46,7 @@ GitHub  ←→  Roster (AI スタッフ)  ←→  Jira / Confluence / Slack
 | 9. マルチ LLM プロバイダ(Anthropic / OpenAI 互換) | ✅ v0.2.0 |
 | 10. Helm chart(K8s デプロイ) | ✅ v0.2.1 |
 | 11. Slack スラッシュコマンド(`/roster …`) | ✅ v0.2.1 |
+| 12. Project Memory(`.roster/memory/`) | ✅ v0.3.0 |
 
 ---
 
@@ -333,6 +334,42 @@ Slack app の設定([api.slack.com/apps](https://api.slack.com/apps) → Create 
 3. Install to Workspace。
 
 特徴:HMAC-v0 署名検証(constant-time + 5 分のリプレイウィンドウ)。`status` は同期。`sync-issue` / `review-pr` / `archive-issue` は即時 ack(`:hourglass_flowing_sand: queued`)してバックグラウンド goroutine で実行(Slack の 3 秒応答制限のため)。結果は GitHub / Jira / Confluence に直接出るので、Slack に戻ってこない。Roster Pod は単一リポジトリ管理のため、Slack コマンドのリポジトリと一致必須。
+
+### Project Memory(v0.3.0 から)
+
+`roster init` は `.roster/memory/` 配下に 4 つの規約ファイルを生成します:
+
+```
+.roster/memory/
+├── conventions.md       # PR / コーディング / テスト規約
+├── decisions.md         # 直近のアーキテクチャ判断(なぜそうしたか)
+├── module_owners.md     # どのモジュールが誰の所掌か、レビュアーは誰か
+└── glossary.md          # プロジェクト用語集
+```
+
+AI 呼び出しごと(Module A フィールド抽出 / B PR レビュー / C
+Confluence サマリ)、Roster はこれらのファイルを読んで system
+prompt に差し込みます。**プレーンな markdown、ベクトル DB なし、
+RAG なし** — 理由は [PRINCIPLES.md](PRINCIPLES.md) を参照。
+
+具体的な効果:`conventions.md` に 5 行書くだけで —
+
+```
+## PR
+- PR は 300 行未満
+- 自明でないロジックにはテスト必須
+## スタイル
+- 関数型 Go を優先、ORM は導入しない
+```
+
+— 次の PR レビューから Module B はチームの規約に従って判断します。
+**再起動なし、プロンプトチューニングなし、ファインチューニング
+なし。** ファイルを編集 → 次の呼び出しで反映。
+
+制約:1 ファイル ≤ 16 KB、合計 ≤ 64 KB(超過は切り詰めてマーク)。
+不在 / 空ファイルは黙ってスキップ — daemon は決して落ちません。
+`roster init --force` は既存の memory ファイルを**上書きしません** —
+人が書いた知識は守ります。
 
 ### Undercover Mode(常時 ON)
 

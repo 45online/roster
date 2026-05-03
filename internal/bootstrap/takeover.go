@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -21,6 +22,7 @@ import (
 	"github.com/45online/roster/internal/api"
 	"github.com/45online/roster/internal/audit"
 	"github.com/45online/roster/internal/budget"
+	"github.com/45online/roster/internal/memory"
 	"github.com/45online/roster/internal/modules/issue_to_confluence"
 	"github.com/45online/roster/internal/modules/issue_to_jira"
 	"github.com/45online/roster/internal/modules/pr_review"
@@ -96,6 +98,24 @@ Credentials (env vars):
 			ghClient := gh.NewClient(ghToken)
 			jiraClient := jira.NewClient(jiraURL, jiraEmail, jiraToken)
 			recorder := audit.NewRecorder(audit.DefaultBaseDir())
+
+			// Project memory: read once at startup. Cheap (≤64 KB) and
+			// stable for the daemon's lifetime; if conventions change
+			// just restart. Errors are non-fatal — empty memory means
+			// modules behave like v0.2.x.
+			memDir := "."
+			if cfgFile != "" {
+				memDir = filepath.Dir(filepath.Dir(cfgFile)) // <root>/.roster/config.yml → <root>
+			}
+			mem, memErr := memory.Load(memDir)
+			if memErr != nil {
+				fmt.Fprintf(os.Stderr, "⚠ memory load: %v (continuing with empty memory)\n", memErr)
+			}
+			if !mem.Empty() {
+				fmt.Printf("✓ Project memory loaded: %d files, %d bytes\n",
+					len(mem.LoadedFiles()), mem.Bytes())
+			}
+
 			modA := issue_to_jira.New(ghClient, jiraClient, issue_to_jira.Config{
 				JiraProject:      jiraProject,
 				DefaultIssueType: orDefault(cfg.Modules.IssueToJira.DefaultIssueType, "Task"),
@@ -105,7 +125,7 @@ Credentials (env vars):
 					"P1": "High",
 					"P2": "Medium",
 				}),
-			}).WithAudit(recorder)
+			}).WithAudit(recorder).WithMemory(mem)
 
 			// Optional AI extractor for Modules A / B / C — supports any
 			// configured LLM provider (Anthropic / OpenAI-compatible).
@@ -134,7 +154,7 @@ Credentials (env vars):
 						MaxDiffBytes:      cfg.Modules.PRReview.MaxDiffBytes,
 						CanApprove:        cfg.Modules.PRReview.CanApprove,
 						CanRequestChanges: cfg.Modules.PRReview.CanRequestChanges,
-					}).WithAudit(recorder)
+					}).WithAudit(recorder).WithMemory(mem)
 					fmt.Println("✓ Module B (PR review) armed")
 				}
 			}
@@ -165,7 +185,7 @@ Credentials (env vars):
 						ParentPageID:   cfg.Modules.IssueToConfluence.ParentPageID,
 						CompletedLabel: cfg.Modules.IssueToConfluence.CompletedLabel,
 						SlackChannel:   cfg.Modules.IssueToConfluence.SlackChannel,
-					}).WithAudit(recorder)
+					}).WithAudit(recorder).WithMemory(mem)
 					fmt.Println("✓ Module C (issue archive) armed")
 				}
 			}

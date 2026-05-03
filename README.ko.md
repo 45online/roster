@@ -20,9 +20,9 @@ GitHub  ←→  Roster (AI 직원)  ←→  Jira / Confluence / Slack
 
 ## 상태
 
-**릴리스됨: [v0.2.1](https://github.com/45online/roster/releases/tag/v0.2.1)** — 설계 문서가 계획한 모든 단계가 구현됨: 4개의 엔드투엔드 모듈, 2가지 모드의 Budget 임계값, Undercover 신원 격리, Polling + Webhook 이중 이벤트 소스, 크로스플랫폼 바이너리 + 멀티아키 Docker, **멀티 LLM provider** (Claude / DeepSeek / Gemini / OpenAI / xAI / OpenAI 호환 엔드포인트 모두).
+**릴리스됨: [v0.3.0](https://github.com/45online/roster/releases/tag/v0.3.0)** — Project Memory 착지. 각 리포는 `.roster/memory/` 아래에 4개의 약속 파일(conventions / decisions / module_owners / glossary)을 유지하고, 모든 AI 모듈은 호출할 때마다 이를 system prompt에 주입합니다. 이는 [PRINCIPLES.md](PRINCIPLES.md)의 "AI = 도구 + 시간축" 명제의 첫 구체 단계: 재학습 없이도 같은 모델이 이 프로젝트에 **매일 더 익숙해집니다**.
 
-**다음 단계는 도그푸드(dogfood)**. 기능 채우기는 여기까지. 다음 한 주는 실제 리포지토리에서 돌려가며 어떤 가정이 깨지는지(프롬프트 튜닝 / 모듈 경계 / UX 거친 부분) 관찰하는 시간. 전체 릴리스 이력은 [CHANGELOG.md](CHANGELOG.md).
+**다음 단계는 도그푸드(dogfood)**. 기능 채우기는 여기까지. 다음 한 주는 실제 리포지토리에서 돌려가며 어떤 가정이 깨지는지(프롬프트 튜닝 / 모듈 경계 / 5줄짜리 `conventions.md`가 실제로 얼마나 효과 있는지) 관찰하는 시간. 전체 릴리스 이력은 [CHANGELOG.md](CHANGELOG.md).
 
 | 단계 | 상태 |
 |---|---|
@@ -46,6 +46,7 @@ GitHub  ←→  Roster (AI 직원)  ←→  Jira / Confluence / Slack
 | 9. 멀티 LLM provider (Anthropic / OpenAI 호환) | ✅ v0.2.0 |
 | 10. Helm chart (Kubernetes 배포) | ✅ v0.2.1 |
 | 11. Slack 슬래시 명령 (`/roster …`) | ✅ v0.2.1 |
+| 12. Project Memory (`.roster/memory/`) | ✅ v0.3.0 |
 
 ---
 
@@ -299,6 +300,42 @@ Slack app 구성 ([api.slack.com/apps](https://api.slack.com/apps) → Create Ne
 3. Install to Workspace
 
 특징: HMAC-v0 서명 검증 (constant-time + 5분 리플레이 윈도우). `status`는 동기. `sync-issue` / `review-pr` / `archive-issue`는 즉시 ack(`:hourglass_flowing_sand: queued`)하고 백그라운드 goroutine에서 실행 (Slack의 3초 응답 한계 때문). 결과는 GitHub / Jira / Confluence에 직접 나오고, Slack으로 돌아오지 않음. Roster 인스턴스는 단일 리포 관리이므로 Slack 명령의 리포가 일치해야 함.
+
+### Project Memory (v0.3.0부터)
+
+`roster init`은 `.roster/memory/` 아래에 4개의 약속 파일을 생성합니다:
+
+```
+.roster/memory/
+├── conventions.md       # PR / 코딩 / 테스트 규약
+├── decisions.md         # 최근 아키텍처 결정 (그리고 왜)
+├── module_owners.md     # 어느 모듈이 누구 것이고 누가 리뷰하는지
+└── glossary.md          # 프로젝트 용어집
+```
+
+AI 호출마다(Module A 필드 추출 / B PR 리뷰 / C Confluence 요약),
+Roster는 이 파일들을 읽어 system prompt에 주입합니다. **순수
+markdown, 벡터 DB 없음, RAG 없음** — 근거는
+[PRINCIPLES.md](PRINCIPLES.md) 참조.
+
+구체적 효과: `conventions.md`에 5줄만 적으면 —
+
+```
+## PR
+- PR < 300줄
+- 자명하지 않은 로직엔 테스트 필수
+## 스타일
+- 함수형 Go 선호; ORM 도입 안 함
+```
+
+— 다음 PR 리뷰부터 Module B의 판단이 팀 규약을 따릅니다.
+**재시작 없음, 프롬프트 튜닝 없음, 파인튜닝 없음.** 파일 편집 →
+다음 호출에 반영.
+
+제약: 파일당 ≤ 16 KB, 합산 ≤ 64 KB (초과분은 잘리고 표시됨).
+없거나 빈 파일은 조용히 건너뜁니다 — daemon은 절대 죽지
+않습니다. `roster init --force`는 기존 memory 파일을 **덮어쓰지
+않습니다**; 사람이 쓴 지식은 보호합니다.
 
 ### Undercover Mode (항상 ON)
 

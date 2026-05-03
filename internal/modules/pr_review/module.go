@@ -20,6 +20,7 @@ import (
 	"github.com/45online/roster/internal/api"
 	"github.com/45online/roster/internal/audit"
 	"github.com/45online/roster/internal/budget"
+	"github.com/45online/roster/internal/memory"
 	"github.com/45online/roster/internal/undercover"
 )
 
@@ -71,11 +72,12 @@ type LineComment struct {
 
 // Module is the PR review module.
 type Module struct {
-	gh    *gh.Client
-	api   api.Client
-	cfg   Config
-	model string
-	audit *audit.Recorder
+	gh     *gh.Client
+	api    api.Client
+	cfg    Config
+	model  string
+	audit  *audit.Recorder
+	memory *memory.Memory // optional project memory inlined into system prompt
 }
 
 // New constructs a Module. Caller supplies a Claude client and optional config.
@@ -93,6 +95,15 @@ func New(github *gh.Client, claude api.Client, model string, cfg Config) *Module
 // WithAudit attaches an audit recorder.
 func (m *Module) WithAudit(r *audit.Recorder) *Module {
 	m.audit = r
+	return m
+}
+
+// WithMemory attaches the project memory loaded from .roster/memory/.
+// Its contents are inlined into the review system prompt at the end
+// (after the undercover suffix), so the model sees project conventions
+// when judging a PR.
+func (m *Module) WithMemory(mem *memory.Memory) *Module {
+	m.memory = mem
 	return m
 }
 
@@ -289,7 +300,7 @@ func (m *Module) askClaude(ctx context.Context, pr *gh.PullRequest, diff string)
 	req := &api.MessageRequest{
 		Model:       m.model,
 		MaxTokens:   4096,
-		System:      reviewSystemPrompt + undercover.SystemSuffix,
+		System:      reviewSystemPrompt + undercover.SystemSuffix + m.memory.Inject(),
 		Messages:    []api.MessageParam{{Role: "user", Content: contentJSON}},
 		QuerySource: "background",
 	}

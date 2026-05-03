@@ -9,6 +9,7 @@ import (
 
 	gh "github.com/45online/roster/internal/adapters/github"
 	"github.com/45online/roster/internal/audit"
+	"github.com/45online/roster/internal/memory"
 	"github.com/45online/roster/internal/modules/pr_review"
 	"github.com/45online/roster/internal/projcfg"
 )
@@ -57,10 +58,11 @@ ANTHROPIC_API_KEY (or 'roster login claude') is REQUIRED for Module B.
 			}
 
 			recorder := audit.NewRecorder(audit.DefaultBaseDir())
+			mem, _ := memory.Load(".") // empty memory if absent — non-fatal
 			mod := pr_review.New(ghClient, apiClient, llmCfg.Model, pr_review.Config{
 				CanApprove:        canApprove,
 				CanRequestChanges: canRequestChanges,
-			}).WithAudit(recorder)
+			}).WithAudit(recorder).WithMemory(mem)
 
 			ctx := context.Background()
 			res, err := mod.ReviewPR(ctx, repo, prNum)
